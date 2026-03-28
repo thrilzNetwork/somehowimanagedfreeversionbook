@@ -330,7 +330,7 @@ export default function App() {
     }
   };
 
-  const shareText = "This free book by Alejandro Soria is the manual I wish I had in hospitality. Somehow I Managed:";
+  const shareText = "I'm reading 'Somehow I Managed' by Alejandro Soria. Use my link to unlock exclusive free gifts and prizes! 🎁";
   const encodedUrl = encodeURIComponent(BOOK_URL);
   const encodedText = encodeURIComponent(`${shareText} ${BOOK_URL}`);
 
@@ -389,7 +389,7 @@ export default function App() {
         </section>
 
         {/* Dedication Section */}
-        <section className="flex min-h-screen flex-col items-center justify-center border-b border-white/10 px-8 py-20 text-center md:px-20">
+        <section className="flex flex-col items-center justify-center border-b border-white/10 px-8 py-24 text-center md:px-20 md:py-32">
           <motion.span 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 0.5 }}
@@ -419,7 +419,7 @@ export default function App() {
         </section>
 
         {/* TOC Section */}
-        <section id="toc" className="flex min-h-screen flex-col justify-center border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="toc" className="flex flex-col justify-center border-b border-white/10 px-6 py-20 md:px-20 md:py-32">
           <span className="mb-8 block font-mono text-[10px] tracking-[4px] uppercase text-gold md:mb-12 md:text-xs md:tracking-[5px]">Contents</span>
           <div className="space-y-0">
             {[
@@ -451,7 +451,7 @@ export default function App() {
         </section>
 
         {/* Chapter 00 */}
-        <section id="ch0" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch0" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">00 · Foreword</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -522,7 +522,7 @@ export default function App() {
         </section>
 
         {/* Chapter 01 */}
-        <section id="ch1" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch1" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">01 · Day Zero</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -600,7 +600,7 @@ export default function App() {
         </section>
 
         {/* Chapter 02 */}
-        <section id="ch2" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch2" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">02 · The Turnaround</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -674,7 +674,7 @@ export default function App() {
         </section>
 
         {/* Chapter 03 */}
-        <section id="ch3" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch3" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">03 · The Money People</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -734,10 +734,26 @@ export default function App() {
                 </div>
                 <div className="flex flex-col items-center justify-center rounded border border-black/10 bg-black/5 p-6 text-center">
                   <span className="mb-1 block text-[10px] font-bold uppercase text-black/40">Your Flow-Through</span>
-                  <span className="font-serif text-5xl font-black text-black">
-                    {calcRevenue > 0 ? Math.round((calcGop / calcRevenue) * 100) : 0}%
-                  </span>
-                  <div className="mt-2 text-[11px] font-medium text-black/60">A healthy benchmark for select-service hotels.</div>
+                  {(() => {
+                    const flowThrough = calcRevenue > 0 ? Math.round((calcGop / calcRevenue) * 100) : 0;
+                    const isHealthy = flowThrough >= 50;
+                    const isBad = flowThrough < 50 && calcRevenue > 0;
+                    
+                    return (
+                      <>
+                        <span className={`font-serif text-5xl font-black transition-colors duration-300 ${
+                          isHealthy ? 'text-emerald-700' : isBad ? 'text-rose-700' : 'text-black'
+                        }`}>
+                          {flowThrough}%
+                        </span>
+                        <div className={`mt-2 text-[11px] font-medium transition-colors duration-300 ${
+                          isHealthy ? 'text-emerald-800/70' : isBad ? 'text-rose-800/70' : 'text-black/60'
+                        }`}>
+                          {isHealthy ? "Excellent flow-through performance." : isBad ? "Flow-through is below healthy benchmarks." : "A healthy benchmark for select-service hotels."}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -753,7 +769,7 @@ export default function App() {
         </section>
 
         {/* Chapter 04 */}
-        <section id="ch4" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch4" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">04 · People First</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -830,7 +846,7 @@ export default function App() {
         </section>
 
         {/* Chapter 05 */}
-        <section id="ch5" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch5" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">05 · F&B Strategy</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -897,7 +913,7 @@ export default function App() {
         </section>
 
         {/* Chapter 06 */}
-        <section id="ch6" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch6" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">06 · Modernization</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -964,7 +980,7 @@ export default function App() {
         </section>
 
         {/* Chapter 07 */}
-        <section id="ch7" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch7" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">07 · Resilience</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1034,7 +1050,7 @@ export default function App() {
         </section>
 
         {/* Chapter 08 */}
-        <section id="ch8" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+        <section id="ch8" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">08 · Closing Notes</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1087,34 +1103,13 @@ export default function App() {
               Go manage something great.
             </p>
             
-            <span className="mt-4 block font-mono text-xs tracking-[3px] uppercase text-white/40">
-              — Alejandro Soria
-            </span>
           </div>
         </section>
-
-
-
 
         {/* About Section */}
         <section id="about" className="px-6 py-16 md:px-20 md:py-20">
           <span className="mb-8 block font-mono text-[10px] tracking-[5px] uppercase text-gold md:mb-12 md:text-xs">About the Author</span>
-          <div className="mt-8 grid grid-cols-1 gap-8 md:mt-12 md:grid-cols-[170px_1fr] md:gap-11">
-            <div className="flex flex-col items-center md:items-start">
-              <div className="relative flex h-[210px] w-[170px] flex-col items-center justify-center bg-[#111] p-6 text-center before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-full before:bg-gold">
-                <span className="mb-4 font-mono text-[9px] uppercase tracking-[3px] text-gold">Interactive Edition</span>
-                <p className="font-serif text-[11px] italic leading-relaxed text-white/60">
-                  This is the interactive version.
-                </p>
-                <div className="my-3 h-[1px] w-8 bg-gold/20" />
-                <p className="font-serif text-[11px] italic leading-relaxed text-white/60">
-                  Hard copy full chapters drop April 13.
-                </p>
-                <div className="mt-5 rounded-sm border border-gold/20 bg-gold/5 px-2 py-1 font-mono text-[8px] uppercase tracking-[1px] text-gold/80">
-                  Sign up for waiting list
-                </div>
-              </div>
-            </div>
+          <div className="mt-8">
             <div className="text-center md:text-left">
               <h2 className="mb-1 font-serif text-3xl font-black tracking-tight text-white md:text-4xl">Alejandro Soria</h2>
               <span className="mb-6 block font-mono text-[10px] tracking-[2px] uppercase text-gold">Operator · Founder · 10+ Years in the Building</span>
@@ -1158,7 +1153,7 @@ export default function App() {
         </section>
 
         {/* Closing Section */}
-        <section className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-16 text-center md:px-20 md:py-20">
+        <section className="flex flex-col items-center justify-center px-6 py-20 text-center md:px-20 md:py-32">
           <Key className="mb-6 h-6 w-6 text-gold opacity-60 md:mb-9 md:h-8 md:w-8" />
           <h2 className="mb-4 font-serif text-2xl font-black text-white md:text-4xl">Quantum Hospitality Solutions</h2>
           <p className="mb-6 max-w-[440px] text-xs leading-relaxed text-white/45 md:mb-4 md:text-sm">
@@ -1175,9 +1170,9 @@ export default function App() {
         {/* Share Section */}
         <section className="border-t border-white/10 bg-[#050505] px-6 py-16 text-center md:px-20 md:py-20">
           <span className="mb-5 block font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">Spread the Word</span>
-          <h2 className="mb-3 font-serif text-2xl font-black text-white md:text-3xl">Know someone who needs this?</h2>
+          <h2 className="mb-3 font-serif text-2xl font-black text-white md:text-3xl">Unlock Gifts & Prizes</h2>
           <p className="mx-auto mb-8 max-w-[440px] text-xs leading-relaxed text-white/45 md:mb-9 md:text-sm">
-            Share with 5 colleagues in hospitality. They will thank you for it.
+            Share this book with 5 colleagues to unlock exclusive gifts and prizes. They get the manual, you get the rewards.
           </p>
           
           <div className="flex flex-wrap justify-center gap-2 md:gap-3">
@@ -1224,11 +1219,34 @@ export default function App() {
             </button>
           </div>
         </section>
+        
+        {/* Endel Focus Mode Promo */}
+        <section className="border-t border-white/5 bg-black px-6 py-12 text-center md:px-20 md:py-16">
+          <div className="mx-auto max-w-2xl">
+            <p className="mb-4 font-serif text-lg italic text-white/60 md:text-xl">
+              Did you enjoy the focus mode?
+            </p>
+            <p className="mb-8 text-sm leading-relaxed text-white/40 md:text-base">
+              Learn more here with exclusive free 14 days my gift to you:
+            </p>
+            <a 
+              href="https://code.endel.io/?code=1jtfhb9&referrer=singular_click_id%3D6c557950-0089-4d5f-963e-eabdc63726a6&sl_id=6l18q&spec=%7B%22links%22%3A%5B%7B%22referralActivation%22%3A%7B%22webActivationLink%22%3A%22https%3A%2F%2Fendel.io%3Fspec%3D%257B%2522links%2522%253A%255B%257B%2522webUrl%2522%253A%257B%2522closeOtherScreens%2522%253Afalse%252C%2522url%2522%253A%2522https%253A%252F%252Fcode.endel.io%253Fcode%253D1jtfhb9%2522%257D%257D%255D%257D%22%7D%7D%5D%7D"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-8 py-4 font-mono text-xs font-bold uppercase tracking-[2px] text-gold transition-all hover:bg-gold hover:text-black"
+            >
+              Claim 14 Days Free
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </section>
 
       </div>
       
       {/* Fixed Navigation Menu */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 md:bottom-10 md:right-10">
+        <FocusAudio />
+        
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
@@ -1237,8 +1255,6 @@ export default function App() {
               exit={{ opacity: 0, y: 20, scale: 0.8 }}
               className="flex flex-col items-end gap-3"
             >
-              <FocusAudio />
-              
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}

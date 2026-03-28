@@ -17,7 +17,7 @@ export const FocusAudio: React.FC = () => {
   const widgetRef = useRef<any>(null);
 
   const SOUNDCLOUD_URL = "https://soundcloud.com/thrilz-network/music-focus";
-  const EMBED_URL = `https://w.soundcloud.com/player/?url=${encodeURIComponent(SOUNDCLOUD_URL)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=false`;
+  const EMBED_URL = `https://w.soundcloud.com/player/?url=${encodeURIComponent(SOUNDCLOUD_URL)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=false&loop=true`;
 
   useEffect(() => {
     // Load SoundCloud Widget API
@@ -43,7 +43,8 @@ export const FocusAudio: React.FC = () => {
         });
 
         widget.bind(window.SC.Widget.Events.FINISH, () => {
-          setIsPlaying(false);
+          // Force loop if the URL parameter doesn't catch it
+          widget.play();
         });
 
         widget.bind(window.SC.Widget.Events.ERROR, (err: any) => {
@@ -69,7 +70,8 @@ export const FocusAudio: React.FC = () => {
     if (!widgetRef.current || !widgetReady) return;
 
     if (isPlaying) {
-      widgetRef.current.pause();
+      // User requested that once pressed, it cannot stop
+      return;
     } else {
       setIsLoading(true);
       widgetRef.current.play();
