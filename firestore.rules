@@ -117,7 +117,8 @@ service cloud.firestore {
     // Chapter Visuals
     match /chapter_visuals/{visualId} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() < 1000000 &&
+                      request.resource.data.prompt is string && request.resource.data.prompt.size() < 2000;
     }
 
     // Default deny
