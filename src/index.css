@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-gold: #c9a84c;
+  --color-pink: #ff3cac;
+  --color-yellow: #d4ff00;
+  --color-black: #080808;
+}
+
+:root {
+  --black: #080808;
+  --white: #ffffff;
+  --pink: #ff3cac;
+  --yellow: #d4ff00;
+  --gold: #c9a84c;
+  --off-white: rgba(255, 255, 255, 0.82);
+  --muted: rgba(255, 255, 255, 0.45);
+  --muted2: rgba(255, 255, 255, 0.22);
+  --border: rgba(255, 255, 255, 0.07);
+  --border2: rgba(255, 255, 255, 0.13);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--black);
+  color: var(--white);
+}
+
+.markdown-body p {
+  margin-bottom: 1.5rem;
+  line-height: 1.95;
+}
+
+.dropcap::first-letter {
+  font-family: var(--font-serif);
+  font-size: 64px;
+  font-weight: 900;
+  float: left;
+  line-height: 0.82;
+  margin: 10px 13px 0 0;
+  color: var(--gold);
+}

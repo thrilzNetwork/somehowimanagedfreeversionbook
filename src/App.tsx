@@ -1,0 +1,462 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { motion } from "motion/react";
+import { 
+  Key, 
+  Linkedin, 
+  Twitter, 
+  Mail, 
+  Copy, 
+  Check, 
+  ArrowRight, 
+  Quote, 
+  CheckSquare, 
+  ExternalLink,
+  MessageCircle
+} from "lucide-react";
+import { useState, useEffect } from "react";
+
+const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
+
+export default function App() {
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(BOOK_URL);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareText = "This free book by Alejandro Soria is the manual I wish I had in hospitality. Somehow I Managed:";
+  const encodedUrl = encodeURIComponent(BOOK_URL);
+  const encodedText = encodeURIComponent(`${shareText} ${BOOK_URL}`);
+
+  return (
+    <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
+      <div className="mx-auto max-w-[820px] bg-black">
+        
+        {/* Cover Section */}
+        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] px-8 py-20 text-center md:px-16">
+          <div className="absolute top-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
+          <div className="absolute bottom-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-center"
+          >
+            <div className="mb-12 font-mono text-[9px] tracking-[5px] uppercase text-gold/40">
+              Quantum Hospitality Solutions
+            </div>
+            
+            <div className="mb-12 opacity-70">
+              <Key className="h-8 w-8 text-gold" />
+            </div>
+            
+            <h1 className="font-serif leading-none">
+              <span className="mb-2 block text-base italic tracking-[2px] text-gold md:text-xl">Somehow</span>
+              <span className="block text-7xl font-black tracking-[-5px] md:text-9xl">Managed</span>
+            </h1>
+            
+            <div className="my-10 h-[1px] w-8 bg-gold opacity-60" />
+            
+            <div className="font-serif text-lg tracking-wider text-white/55 md:text-xl">
+              Alejandro Soria
+            </div>
+          </motion.div>
+          
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] tracking-[4px] uppercase text-white/10">
+            Hospitality Edition &nbsp;·&nbsp; First Print
+          </div>
+        </section>
+
+        {/* Dedication Section */}
+        <section className="flex min-h-screen flex-col items-center justify-center border-b border-white/10 px-8 py-20 text-center md:px-20">
+          <motion.span 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 0.5 }}
+            className="mb-5 block font-serif text-8xl leading-none text-gold"
+          >
+            "
+          </motion.span>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="max-w-[540px] space-y-6"
+          >
+            <p className="font-serif text-xl italic leading-relaxed text-white/80">
+              To every person who has ended a brutal shift and come back the next morning anyway. You are not just doing a job. You are carrying something most people will never understand — the weight of other people's comfort, their safety, their experiences. That is not ordinary work.
+            </p>
+            <p className="font-serif text-xl italic leading-relaxed text-white/80">
+              To the front desk agent who smiled at 11 PM. To the housekeeper who treated every room as if it were her own. To the night auditor who sat alone with the building. To the chef who never got the credit. To every GM who stayed long after everyone else left.
+            </p>
+            <p className="font-serif text-xl italic leading-relaxed text-white/80">
+              And to my brother, Juan Carlos — the best GM I have ever known. You taught me to love the people before you love the business. Everything in this book begins with what you showed me.
+            </p>
+            <span className="mt-10 block font-mono text-xs tracking-[3px] uppercase text-gold">
+              — A.S.
+            </span>
+          </motion.div>
+        </section>
+
+        {/* TOC Section */}
+        <section id="toc" className="flex min-h-screen flex-col justify-center border-b border-white/10 px-8 py-20 md:px-20">
+          <span className="mb-12 block font-mono text-xs tracking-[5px] uppercase text-gold">Contents</span>
+          <div className="space-y-0">
+            {[
+              { num: "00", title: "Foreword — The Houseman Who Fell in Love", sub: "How I got here, and who this is really for", id: "ch0" },
+              { num: "01", title: "Day Zero — Opening a Hotel From Scratch", sub: "The opening, culture before team, and what actually matters", id: "ch1" },
+              { num: "02", title: "The Turnaround — Walking Into a Broken Property", sub: "Diagnose before you act. Order matters more than speed.", id: "ch2" },
+              { num: "03", title: "The Money People — Ownership & Investors", sub: "The relationship that defines everything else", id: "ch3" },
+              { num: "04", title: "Your Team Is Everything", sub: "Real culture, real retention, and hard conversations", id: "ch4" },
+              { num: "05", title: "F&B Is Not an Amenity", sub: "Revenue strategy and the outlet nobody takes seriously enough", id: "ch5" },
+              { num: "06", title: "The Last Industry to Modernize", sub: "Technology, systems, and why the gap is your advantage", id: "ch6" },
+              { num: "07", title: "Running on Empty", sub: "COVID, family, career gaps, and how I kept going", id: "ch7" },
+              { num: "08", title: "Closing Notes — What I Know Now", sub: "The words I needed to hear when nobody was saying them", id: "ch8" },
+              { num: "—", title: "About the Author", sub: "", id: "about" },
+            ].map((item, i) => (
+              <a 
+                key={i} 
+                href={`#${item.id}`}
+                className="group flex items-start gap-6 border-b border-white/10 py-4 transition-colors hover:bg-white/5"
+              >
+                <span className="min-w-[28px] pt-1 font-mono text-[10px] text-white/20 group-hover:text-gold">{item.num}</span>
+                <div>
+                  <div className="text-base font-semibold text-white group-hover:text-gold">{item.title}</div>
+                  {item.sub && <div className="text-sm italic text-white/45">{item.sub}</div>}
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* Chapter 00 */}
+        <section id="ch0" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">00 · Foreword</span>
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">The Houseman Who Fell in Love</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "I showed up thinking I was going to work in an office. I was. It just needed to be cleaned first."
+          </span>
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              Before anything else, let me be clear about what this book is and what it is not. I did not write this to inspire you to build a company. I did not write it to turn my journey into a template you should follow. There are enough books that try to do that. This is not one of them.
+            </p>
+            <p>
+              I wrote this because I am the manager you always asked for and never had. The director of operations who still has GM experience in his hands and feet — not just on a résumé. The voice you needed when you were standing in the middle of something hard and nobody around you said anything useful. The support that was not there when you needed it. So I wrote it down.
+            </p>
+            <p>
+              This is a manual. For the front desk agent who wants to understand why decisions above them get made the way they do. For the housekeeping supervisor who runs the most operationally complex department in the building and rarely gets acknowledged for it. For the GM who has been doing this fifteen years and still sometimes feels like they are improvising. For the F&B manager who knows something is wrong with the numbers but cannot name it precisely. For the new hire on week two still trying to understand what a hotel actually is.
+            </p>
+            
+            <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-11 py-9">
+              <Quote className="absolute top-6 left-6 h-20 w-20 text-gold opacity-10" />
+              <p className="relative z-10 font-serif text-xl italic leading-relaxed text-white">
+                "I didn't write this because I figured it all out. I wrote it because I'm still in it, still learning, still making mistakes — and I got tired of pretending otherwise."
+              </p>
+              <cite className="relative z-10 mt-4 block font-mono text-[10px] tracking-[2px] uppercase text-gold not-italic">
+                — A.S.
+              </cite>
+            </div>
+
+            <h3 className="relative mb-4 mt-12 pl-4 font-serif text-2xl font-bold text-white before:absolute before:top-1 before:left-0 before:h-full before:w-[3px] before:rounded-sm before:bg-gold">
+              Where I Started
+            </h3>
+            <p>
+              I was born in South America and moved to the United States in 2009. After high school I enrolled in aviation academy. Before that, it had been soccer — my entire life built around the game. And then one day on a field, I waited for the feeling to return and it did not. I was ready for something else, though I did not know what yet.
+            </p>
+            
+            <div className="my-10 border-l-[3px] border-gold bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-gold">The Beginning — Hampton Brand, 2009</span>
+              <p className="font-serif text-base italic leading-relaxed text-white/65">
+                My GM, Justin, was the person who gave me the real opportunity — alongside my brother, he is one of the people most responsible for who I became. I worked houseman from 9 to 3 and security from 5 to 3. Security meant a flashlight and a radio. That was it. And somehow, from the very first week, I loved it. I loved the structure of the hotel. Its rhythm. The way the building shifted energy at different hours. I did not know I was falling in love with an industry. I just knew I wanted to understand everything about how this place worked.
+              </p>
+            </div>
+
+            <p>
+              My English was not ready for a guest-facing role. So instead of waiting, I positioned myself. I spent time near the front desk. I learned to make keys. I printed registration cards. I answered phones when they let me. I watched how experienced agents handled complaints, how they read a guest, how they moved through a check-in with forty people in line. I was learning without being enrolled in anything.
+            </p>
+          </div>
+        </section>
+
+        {/* Chapter 01 */}
+        <section id="ch1" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">01 · Day Zero</span>
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Opening a Hotel From Scratch</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "You will never feel ready. Open anyway. The hotel will finish building itself around you."
+          </span>
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              Opening day feels like this. You have been building toward it for months. You have made hundreds of decisions under pressure with information you wished you had but did not. Your team is a mix of people who are ready and people who are not — you know the difference, but you need all of them today because there is no one else. The building is ninety-something percent finished. The flag goes up whether the punch list is complete or not.
+            </p>
+            
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 01</span>
+              <h4 className="mb-3 font-serif text-xl font-bold text-white">The building is the easy part. Culture is not.</h4>
+              <p className="text-sm leading-relaxed text-white/80">
+                Contractors fix walls on a schedule. Nobody fixes a culture that was built wrong in the first ninety days on any schedule. Your front desk script cannot wait. Your housekeeping sequence cannot wait. Your service philosophy cannot wait. Start there — everything else arranges itself around it.
+              </p>
+            </div>
+
+            <div className="my-10 grid grid-cols-1 bg-yellow md:grid-cols-3">
+              <div className="border-b border-black/10 p-7 text-center md:border-b-0 md:border-r">
+                <span className="block font-serif text-4xl font-black leading-none text-black">90</span>
+                <div className="mt-2 text-[12px] font-medium leading-tight text-black/60">Days to permanently set a hotel's operational DNA</div>
+              </div>
+              <div className="border-b border-black/10 p-7 text-center md:border-b-0 md:border-r">
+                <span className="block font-serif text-4xl font-black leading-none text-black">3×</span>
+                <div className="mt-2 text-[12px] font-medium leading-tight text-black/60">The cost of fixing a culture problem vs. a systems problem</div>
+              </div>
+              <div className="p-7 text-center">
+                <span className="block font-serif text-4xl font-black leading-none text-black">1</span>
+                <div className="mt-2 text-[12px] font-medium leading-tight text-black/60">Chance to make a first impression on your entire market</div>
+              </div>
+            </div>
+
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-5 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Pre-Opening Checklist</span>
+              <div className="space-y-2">
+                {[
+                  "Weeks 1–4: Brand approvals finalized, all department heads hired, PMS and POS configuration begun.",
+                  "Weeks 5–8: Full line staff hired, department training programs running, all safety certifications completed.",
+                  "Weeks 9–10: Full mock operations — front desk, F&B service, housekeeping turns, room service.",
+                  "Weeks 11–12: Soft open with invited guests only. Fix everything they find.",
+                  "Week 13+: Grand opening. You are not fully ready. Open anyway. Fix in motion."
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-3 border-b border-white/5 py-2 text-[15px] leading-relaxed text-white/80 last:border-none">
+                    <CheckSquare className="mt-1 h-4 w-4 flex-shrink-0 text-pink" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Chapter 02 */}
+        <section id="ch2" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">02 · The Turnaround</span>
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Walking Into a Broken Property</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "Don't fix what you see first. Understand what broke it."
+          </span>
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              The first time I walked into a genuinely distressed property, I made the mistake every new turnaround manager makes. I saw what was wrong and I started fixing it immediately — visibly, energetically, with the kind of motion I wanted ownership and the team to read as leadership. I fixed the wrong things. Confidently, efficiently, with full commitment — and I fixed the wrong things.
+            </p>
+            <p>
+              The visible problems were symptoms. The actual cause was something quieter and deeper, embedded in how the team related to each other, in what had silently become normal. Activity looks like leadership. They have the same energy signature. But leadership without diagnosis is confident improvisation — and in a distressed property, that can reinforce the exact dynamics that created the crisis.
+            </p>
+            
+            <div className="my-10 border-l-[3px] border-gold bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-gold">Framework — The 90-Day Turnaround Map</span>
+              <h4 className="mb-4 font-serif text-xl font-bold text-white">What to Do, When, and Why the Order Matters</h4>
+              <div className="space-y-4">
+                {[
+                  { step: "D1–7", content: "Listen only. Walk every space, speak to every level, zero announcements, zero changes." },
+                  { step: "D8–14", content: "Diagnose root causes. The three actual causes beneath all visible symptoms." },
+                  { step: "D15–21", content: "Act on non-negotiables. Safety issues, toxic behavior, financial irregularities." },
+                  { step: "D22–30", content: "Present to ownership. Root causes, 90-day plan, what you need from them." },
+                  { step: "D31–90", content: "Execute, measure, adjust, communicate. Weekly ownership updates." }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 border-b border-white/5 pb-4 last:border-none">
+                    <span className="min-w-[40px] font-mono text-[10px] text-yellow">{item.step}</span>
+                    <div className="text-[15px] leading-relaxed text-white/80">{item.content}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-11 py-9">
+              <Quote className="absolute top-6 left-6 h-20 w-20 text-gold opacity-10" />
+              <p className="relative z-10 font-serif text-xl italic leading-relaxed text-white">
+                "The person who knows the most about what's wrong with your hotel has been there three years and nobody has asked them yet. Go find that person on day one."
+              </p>
+              <cite className="relative z-10 mt-4 block font-mono text-[10px] tracking-[2px] uppercase text-gold not-italic">
+                — A.S.
+              </cite>
+            </div>
+          </div>
+        </section>
+
+        {/* Chapter 03 */}
+        <section id="ch3" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">03 · The Money People</span>
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Managing Ownership & Investors</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "They own the building. You run the building. These are not the same job."
+          </span>
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              The quality of your ownership relationship is determined almost entirely before things go wrong — not during. The trust that lets you push back professionally on a bad decision, deliver a difficult month honestly, or advocate for your team against a cost-cutting proposal was built in the ordinary months before the hard one arrived. You cannot build it retroactively.
+            </p>
+            
+            <div className="my-10 bg-yellow p-8">
+              <span className="mb-2 block font-mono text-[10px] tracking-[3px] uppercase text-black/40">P&L Framework</span>
+              <h4 className="mb-5 font-serif text-xl font-bold text-black">Numbers Every GM Must Own</h4>
+              <div className="space-y-3">
+                {[
+                  "RevPAR Index (RGI) — your fair market share.",
+                  "GOP PAR — Gross Operating Profit Per Available Room.",
+                  "Flow-through — what percentage of incremental revenue reaches GOP.",
+                  "CPOR — Cost Per Occupied Room.",
+                  "Labor as % of Revenue — the most controllable cost line."
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-3 border-b border-black/10 py-2 text-[15px] leading-relaxed text-black/80 last:border-none">
+                    <ArrowRight className="mt-1 h-4 w-4 flex-shrink-0 text-black" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 03</span>
+              <h4 className="mb-3 font-serif text-xl font-bold text-white">A P&L is a story. Tell it before they read it.</h4>
+              <p className="text-sm leading-relaxed text-white/80">
+                Never allow ownership to encounter a difficult month without context from you first. Call the day before the report is distributed. Own what is yours. Explain what happened, what you are doing, and what you expect. Surprises destroy trust faster than bad performance.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* About Section */}
+        <section id="about" className="px-8 py-20 md:px-20">
+          <span className="mb-12 block font-mono text-xs tracking-[5px] uppercase text-gold">About the Author</span>
+          <div className="mt-12 grid grid-cols-1 gap-11 md:grid-cols-[170px_1fr]">
+            <div className="flex flex-col items-center md:items-start">
+              <div className="relative flex h-[210px] w-[170px] items-center justify-center bg-[#111] text-4xl font-black text-gold/20 before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-full before:bg-gold">
+                AS
+              </div>
+              <div className="mt-2 font-mono text-[9px] tracking-[2px] uppercase text-white/20">Alejandro Soria</div>
+            </div>
+            <div>
+              <h2 className="mb-1 font-serif text-3xl font-black tracking-tight text-white">Alejandro Soria</h2>
+              <span className="mb-6 block font-mono text-[10px] tracking-[2px] uppercase text-gold">Operator · Founder · 10+ Years in the Building</span>
+              <div className="space-y-4 text-base leading-relaxed text-white/80">
+                <p>
+                  Alejandro Soria was born in South America and moved to the United States in 2009. He began his career as a houseman and spent the next decade building operational expertise from the ground up: night auditor, front office manager, assistant general manager, and general manager across limited, select, and full-service hotels spanning multiple national brands.
+                </p>
+                <p>
+                  He founded Quantum Hospitality Solutions — AI-powered operational tools built by a hotel operator for hotel operators. He is not a tech founder who studied hotels. He is an operator who studied technology.
+                </p>
+              </div>
+              
+              <div className="mt-7 flex flex-wrap gap-7 border-t border-white/10 pt-6">
+                <div>
+                  <span className="block font-serif text-3xl font-black leading-none text-gold">10+</span>
+                  <div className="mt-1 text-[11px] text-white/20">Years in operations</div>
+                </div>
+                <div>
+                  <span className="block font-serif text-3xl font-black leading-none text-gold">6+</span>
+                  <div className="mt-1 text-[11px] text-white/20">Tools built & live</div>
+                </div>
+                <div>
+                  <span className="block font-serif text-3xl font-black leading-none text-gold">3</span>
+                  <div className="mt-1 text-[11px] text-white/20">Property tiers managed</div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <a 
+                  href="https://www.linkedin.com/in/alejandro-soria-3a849915a" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 border border-gold px-4 py-2 font-mono text-xs tracking-wider text-gold transition-colors hover:bg-gold hover:text-black"
+                >
+                  <Linkedin className="h-3 w-3" />
+                  LinkedIn
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Closing Section */}
+        <section className="flex min-h-screen flex-col items-center justify-center px-8 py-20 text-center md:px-20">
+          <Key className="mb-9 h-8 w-8 text-gold opacity-60" />
+          <h2 className="mb-4 font-serif text-3xl font-black text-white md:text-4xl">Quantum Hospitality Solutions</h2>
+          <p className="mb-4 max-w-[440px] text-sm leading-relaxed text-white/45">
+            AI-powered operational tools built by a hotel operator, for hotel operators.
+          </p>
+          <span className="font-mono text-[10px] tracking-[2px] text-white/20 uppercase">
+            Attenda · ReviewFlow · EventFlow · ShuttleFlow · DirectoryOS · SEO Engine · Content Studio
+          </span>
+          <div className="my-11 h-14 w-[1px] bg-gradient-to-b from-transparent via-gold to-transparent" />
+          <div className="font-serif text-2xl italic text-white/30">Somehow I Managed</div>
+          <div className="mt-2 font-mono text-[10px] tracking-[3px] uppercase text-white/10">Hospitality Edition · First Print</div>
+        </section>
+
+        {/* Share Section */}
+        <section className="border-t border-white/10 bg-[#050505] px-8 py-20 text-center md:px-20">
+          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">Spread the Word</span>
+          <h2 className="mb-3 font-serif text-3xl font-black text-white">Know someone who needs this?</h2>
+          <p className="mx-auto mb-9 max-w-[440px] text-sm leading-relaxed text-white/45">
+            Share with 5 colleagues in hospitality. They will thank you for it.
+          </p>
+          
+          <div className="flex flex-wrap justify-center gap-3">
+            <a 
+              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg bg-[#0077b5] px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+            >
+              <Linkedin className="h-4 w-4" />
+              LinkedIn
+            </a>
+            <a 
+              href={`https://wa.me/?text=${encodedText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg bg-[#25d366] px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+            >
+              <MessageCircle className="h-4 w-4" />
+              WhatsApp
+            </a>
+            <a 
+              href={`https://twitter.com/intent/tweet?text=${encodedText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg bg-black border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+            >
+              <Twitter className="h-4 w-4" />
+              X
+            </a>
+            <a 
+              href={`mailto:?subject=You need to read this book&body=${encodedText}`}
+              className="flex items-center gap-2 rounded-lg bg-[#1a1a1a] border border-white/10 px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+            >
+              <Mail className="h-4 w-4" />
+              Email
+            </a>
+            <button 
+              onClick={copyLink}
+              className="flex items-center gap-2 rounded-lg bg-gold px-5 py-3 text-sm font-semibold text-black transition-transform hover:-translate-y-0.5"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? "Copied!" : "Copy Link"}
+            </button>
+          </div>
+          
+          <p className="mt-4 font-mono text-[10px] tracking-wider text-white/15 uppercase">Audiobook coming soon</p>
+        </section>
+
+      </div>
+      
+      {/* Toast Notification */}
+      <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 rounded-md bg-gold px-6 py-3 font-bold text-black transition-all duration-300 ${copied ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0 pointer-events-none'}`}>
+        Copied!
+      </div>
+    </div>
+  );
+}
