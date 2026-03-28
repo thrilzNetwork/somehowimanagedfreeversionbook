@@ -26,7 +26,7 @@ import {
   Headphones,
   LogOut
 } from 'lucide-react';
-import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap } from '../firebase';
+import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap, saveEntry } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { generateCareerMindmap } from '../services/aiService';
 
@@ -190,13 +190,41 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
             <p className="mb-8 max-w-sm text-sm text-white/40">
               Join the Quantum Closed Community to access share prices, exclusive drops, and hire opportunities.
             </p>
-            <button
-                onClick={() => window.dispatchEvent(new CustomEvent('open-community'))}
-                className="flex items-center gap-2 rounded-lg bg-gold px-8 py-4 text-sm font-bold text-black transition-all hover:bg-yellow"
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const name = formData.get('name') as string;
+                const email = formData.get('email') as string;
+                if (name && email) {
+                  await saveEntry(name, email);
+                  alert('Thank you for signing up!');
+                  window.location.reload();
+                }
+              }}
+              className="w-full max-w-xs space-y-4"
+            >
+              <input 
+                name="name" 
+                placeholder="Full Name" 
+                required 
+                className="w-full rounded-lg bg-white/5 p-3 text-sm text-white border border-white/10 focus:border-gold outline-none"
+              />
+              <input 
+                name="email" 
+                type="email" 
+                placeholder="Email Address" 
+                required 
+                className="w-full rounded-lg bg-white/5 p-3 text-sm text-white border border-white/10 focus:border-gold outline-none"
+              />
+              <button
+                type="submit"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold px-8 py-4 text-sm font-bold text-black transition-all hover:bg-yellow"
               >
                 <LogIn className="h-4 w-4" />
                 Sign Up
               </button>
+            </form>
           </div>
         ) : isLoading ? (
           <div className="flex flex-1 items-center justify-center">

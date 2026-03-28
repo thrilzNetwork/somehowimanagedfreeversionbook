@@ -425,7 +425,7 @@ export default function App() {
     } catch (error: any) {
       console.error("Image Generation Error:", JSON.stringify(error));
       
-      const isQuotaError = error?.message?.includes('429') || error?.message?.includes('quota');
+      const isQuotaError = error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('quota');
       const isKeyError = error?.message?.includes('Requested entity was not found');
       const isPermissionError = error?.message?.includes('403') || error?.message?.includes('PERMISSION_DENIED');
 
@@ -435,8 +435,9 @@ export default function App() {
         return false;
       }
       
-      if (isQuotaError && retryCount < 2) {
-        const delay = (retryCount + 1) * 5000;
+      if (isQuotaError && retryCount < 5) {
+        const delay = (retryCount + 1) * 10000; // Increased delay
+        console.log(`Rate limited. Retrying in ${delay}ms... (Attempt ${retryCount + 1})`);
         await new Promise(r => setTimeout(r, delay));
         return generateChapterImage(prompt, chapterId, retryCount + 1);
       }
@@ -461,8 +462,8 @@ export default function App() {
     
     for (const chapter of CHAPTERS) {
       await generateChapterImage(chapter.prompt, chapter.id);
-      // Small delay between generations to respect rate limits
-      await new Promise(r => setTimeout(r, 3000));
+      // Increased delay between generations to respect rate limits
+      await new Promise(r => setTimeout(r, 15000));
     }
   };
 
