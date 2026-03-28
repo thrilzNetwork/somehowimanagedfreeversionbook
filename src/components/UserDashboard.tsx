@@ -26,8 +26,8 @@ import {
   Headphones,
   LogOut
 } from 'lucide-react';
-import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap, saveEntry } from '../firebase';
-import { signInWithPopup, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
+import { auth, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap, saveEntry } from '../firebase';
+import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { generateCareerMindmap } from '../services/aiService';
 
 interface UserDashboardProps {
@@ -75,17 +75,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     });
     return () => unsubscribe();
   }, []);
-
-  const handleLogin = async () => {
-    setIsAuthenticating(true);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err) {
-      console.error('Login error:', err);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
 
   const handleSaveProfile = async () => {
     if (!user || !careerText.trim()) return;
@@ -446,43 +435,35 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
               {activeTab === 'blog' && (
                 <div className="space-y-6">
                   <h3 className="font-serif text-2xl font-bold text-white">Blog</h3>
-                  <div className="grid grid-cols-1 gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {blogItems.map(item => (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         key={item.id} 
-                        className="rounded-xl border border-white/5 bg-white/[0.03] p-6"
+                        className="flex flex-col rounded-xl border border-white/5 bg-white/[0.03] overflow-hidden transition-all hover:border-gold/30"
                       >
-                        <div className="mb-3 flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-[1px] text-gold">Blog</span>
-                          <span className="text-[10px] text-white/20">{item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recently'}</span>
-                        </div>
                         {item.imageUrl && (
                           <img 
                             src={item.imageUrl} 
                             alt={item.title} 
-                            className="mb-4 w-full h-48 object-cover rounded-lg"
+                            className="w-full h-48 object-cover"
                             referrerPolicy="no-referrer"
                           />
                         )}
-                        <h4 className="mb-2 text-xl font-bold text-white">{item.title}</h4>
-                        <p className="text-sm leading-relaxed text-white/60">{item.body}</p>
-                        {item.youtubeUrl && (
-                          <div className="mt-4 aspect-video w-full overflow-hidden rounded-lg">
-                            <iframe
-                              src={`https://www.youtube.com/embed/${item.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}`}
-                              className="h-full w-full"
-                              allowFullScreen
-                              title="YouTube video"
-                            />
+                        <div className="p-6 flex flex-col flex-grow">
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-[1px] text-gold">Blog</span>
+                            <span className="text-[10px] text-white/20">{item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recently'}</span>
                           </div>
-                        )}
-                        {item.url && (
-                          <a href={item.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-gold hover:underline">
-                            Read More <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
+                          <h4 className="mb-2 text-xl font-bold text-white line-clamp-2">{item.title}</h4>
+                          <p className="text-sm leading-relaxed text-white/60 mb-4 line-clamp-3 flex-grow">{item.body}</p>
+                          {item.url && (
+                            <a href={item.url} target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center gap-2 text-xs font-bold text-gold hover:underline">
+                              Read More <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
                       </motion.div>
                     ))}
                     {blogItems.length === 0 && (
