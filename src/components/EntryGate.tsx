@@ -73,7 +73,7 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
               </div>
               <h1 className="mb-2 font-serif text-3xl font-black tracking-tight text-white">Unlock the Experience</h1>
               <p className="text-sm text-white/40">
-                Enter your details to begin the immersive journey of <span className="italic text-gold/60">Somehow I Managed</span>.
+                Enter your details to begin the immersive journey of <span className="italic text-gold/60">Somehow I&nbsp;&nbsp;MANAGED</span>.
               </p>
             </div>
 
@@ -137,10 +137,30 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
             </form>
 
             {/* Footer */}
-            <div className="mt-8 border-t border-white/5 pt-6 text-center">
+            <div className="mt-8 border-t border-white/5 pt-6 text-center space-y-2">
               <p className="font-mono text-[8px] uppercase tracking-[1px] text-white/20">
                 Hospitality Edition · First Print · Interactive
               </p>
+              <div className="flex flex-col gap-2">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('open-community'));
+                  }}
+                  className="block mx-auto font-mono text-[8px] uppercase tracking-[1px] text-gold/40 hover:text-gold transition-colors"
+                >
+                  Community Access
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('open-admin'));
+                  }}
+                  className="block mx-auto font-mono text-[7px] uppercase tracking-[1px] text-white/5 hover:text-gold/20 transition-colors"
+                >
+                  Admin Access
+                </button>
+              </div>
             </div>
           </motion.div>
         </motion.div>

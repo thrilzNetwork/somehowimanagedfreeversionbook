@@ -5,28 +5,59 @@
       "description": "A user entry to access the immersive experience.",
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The user's full name."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time",
-          "description": "When the user entered."
-        }
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "email", "timestamp"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A member of the Quantum Closed Community.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "tier": { "type": "string", "enum": ["basic", "premium", "elite"] },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "tier", "joinedAt"]
+    },
+    "Content": {
+      "title": "Content",
+      "description": "Drops, prices, and updates for the community.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "type": { "type": "string", "enum": ["drop", "price", "update", "pdf"] },
+        "minTier": { "type": "string", "enum": ["basic", "premium", "elite"] },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "body", "type", "minTier", "createdAt"]
+    },
+    "Consultation": {
+      "title": "Consultation",
+      "description": "A request for a consultation.",
+      "type": "object",
+      "properties": {
+        "userUid": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "contacted", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userUid", "userName", "userEmail", "message", "status", "createdAt"]
     }
   },
   "firestore": {
-    "entries/{entryId}": {
-      "schema": "Entry",
-      "description": "Collection of user entries for the immersive experience."
-    }
+    "entries/{entryId}": { "schema": "Entry", "description": "Legacy entries." },
+    "users/{userId}": { "schema": "User", "description": "Community member profiles." },
+    "content/{contentId}": { "schema": "Content", "description": "Community content and drops." },
+    "consultations/{consultationId}": { "schema": "Consultation", "description": "Consultation requests." }
   }
 }

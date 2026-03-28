@@ -25,12 +25,16 @@ import {
   VolumeX,
   X,
   Book,
+  Users,
+  Zap,
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
 import { STATIC_CHAPTER_IMAGES } from "./chapterAssets";
 import { EntryGate } from './components/EntryGate';
 import { FocusAudio } from './components/FocusAudio';
+import { AdminDashboard } from './components/AdminDashboard';
+import { UserDashboard } from './components/UserDashboard';
 
 const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 
@@ -166,6 +170,8 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
 export default function App() {
   const [isAccessGranted, setIsAccessGranted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isCommunityOpen, setIsCommunityOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [chapterImages, setChapterImages] = useState<Record<string, string>>(STATIC_CHAPTER_IMAGES);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
@@ -179,6 +185,17 @@ export default function App() {
   const generationQueue = useRef<string[]>([]);
   const isProcessingQueue = useRef(false);
   const isPaused = useRef(false);
+
+  useEffect(() => {
+    const handleOpenAdmin = () => setIsAdminOpen(true);
+    const handleOpenCommunity = () => setIsCommunityOpen(true);
+    window.addEventListener('open-admin', handleOpenAdmin);
+    window.addEventListener('open-community', handleOpenCommunity);
+    return () => {
+      window.removeEventListener('open-admin', handleOpenAdmin);
+      window.removeEventListener('open-community', handleOpenCommunity);
+    };
+  }, []);
 
   const processQueue = async () => {
     if (isProcessingQueue.current || generationQueue.current.length === 0 || isPaused.current) return;
@@ -314,7 +331,7 @@ export default function App() {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `You are a helpful guide for a book about hospitality leadership titled "Somehow I Managed" by Alejandro Soria. 
+        contents: `You are a helpful guide for a book about hospitality leadership titled "Somehow I  MANAGED" by Alejandro Soria. 
         The reader is looking at Chapter: "${title}". 
         Provide a brief, insightful, and sophisticated explanation (2-3 sentences) that helps the reader understand the core message or emotional weight of this chapter. 
         Keep it professional, encouraging, and cinematic in tone.`,
@@ -330,7 +347,7 @@ export default function App() {
     }
   };
 
-  const shareText = "I'm reading 'Somehow I Managed' by Alejandro Soria. Use my link to unlock exclusive free gifts and prizes! 🎁";
+  const shareText = "I'm reading 'Somehow I&nbsp;&nbsp;MANAGED' by Alejandro Soria. Use my link to unlock exclusive free gifts and prizes! 🎁";
   const encodedUrl = encodeURIComponent(BOOK_URL);
   const encodedText = encodeURIComponent(`${shareText} ${BOOK_URL}`);
 
@@ -373,7 +390,7 @@ export default function App() {
             
             <h1 className="font-serif leading-none">
               <span className="mb-2 block text-sm italic tracking-[2px] text-gold md:text-xl">Somehow</span>
-              <span className="block text-5xl font-black tracking-[-3px] md:text-9xl md:tracking-[-5px]">Managed</span>
+              <span className="block font-black text-[44px] leading-[49px] tracking-normal">I&nbsp;&nbsp;MANAGED</span>
             </h1>
             
             <div className="my-10 h-[1px] w-8 bg-gold opacity-60" />
@@ -1085,7 +1102,7 @@ export default function App() {
             </p>
             
             <p>
-              The title of this book, "Somehow I Managed," is a bit of a joke. Because the truth is, we never just "somehow" manage. We manage with intention. We manage with heart. We manage with a relentless focus on the people who make the building work.
+              The title of this book, "Somehow I&nbsp;&nbsp;MANAGED," is a bit of a joke. Because the truth is, we never just "somehow" manage. We manage with intention. We manage with heart. We manage with a relentless focus on the people who make the building work.
             </p>
 
             <div className="my-10 border border-white/10 bg-[#0d0d0d] px-11 py-9 text-center">
@@ -1163,7 +1180,7 @@ export default function App() {
             Attenda · ReviewFlow · EventFlow · ShuttleFlow · DirectoryOS · SEO Engine · Content Studio
           </span>
           <div className="my-8 h-10 w-[1px] bg-gradient-to-b from-transparent via-gold to-transparent md:my-11 md:h-14" />
-          <div className="font-serif text-xl italic text-white/30 md:text-2xl">Somehow I Managed</div>
+          <div className="font-serif text-xl italic text-white/30 md:text-2xl">Somehow I&nbsp;&nbsp;MANAGED</div>
           <div className="mt-2 font-mono text-[8px] tracking-[2px] uppercase text-white/10 md:text-[10px] md:tracking-[3px]">Hospitality Edition · First Print</div>
         </section>
 
@@ -1272,6 +1289,19 @@ export default function App() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => {
+                  setIsCommunityOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-gold text-black shadow-lg shadow-gold/20 transition-colors hover:bg-yellow"
+                title="Quantum Community"
+              >
+                <Zap className="h-5 w-5" />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
                   document.getElementById('toc')?.scrollIntoView({ behavior: 'smooth' });
                   setIsMenuOpen(false);
                 }}
@@ -1279,6 +1309,20 @@ export default function App() {
                 title="Table of Contents"
               >
                 <Book className="h-5 w-5" />
+              </motion.button>
+
+              {/* Admin Button (Only visible if admin=true in URL or just hidden) */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  setIsAdminOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/20 text-gold shadow-lg shadow-gold/10 transition-colors hover:bg-gold/30"
+                title="Admin Dashboard"
+              >
+                <Users className="h-5 w-5" />
               </motion.button>
             </motion.div>
           )}
@@ -1296,6 +1340,20 @@ export default function App() {
           {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </motion.button>
       </div>
+
+      {/* Admin Dashboard Overlay */}
+      <AnimatePresence>
+        {isAdminOpen && (
+          <AdminDashboard onClose={() => setIsAdminOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Community Dashboard Overlay */}
+      <AnimatePresence>
+        {isCommunityOpen && (
+          <UserDashboard onClose={() => setIsCommunityOpen(false)} />
+        )}
+      </AnimatePresence>
 
       {/* Toast Notification */}
       <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 rounded-md bg-gold px-6 py-3 font-bold text-black transition-all duration-300 ${copied ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0 pointer-events-none'}`}>

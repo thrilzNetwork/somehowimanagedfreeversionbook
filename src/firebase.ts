@@ -1,12 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, addDoc, setDoc, doc, getDoc, serverTimestamp, getDocs, query, orderBy, where, updateDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
 export enum OperationType {
   CREATE = 'create',
@@ -59,6 +60,101 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+export const syncUser = async (user: any) => {
+  const path = `users/${user.uid}`;
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        uid: user.uid,
+        name: user.displayName || 'Anonymous',
+        email: user.email,
+        photoURL: user.photoURL,
+        tier: 'basic',
+        joinedAt: serverTimestamp()
+      });
+    }
+    const finalSnap = await getDoc(userRef);
+    return finalSnap.data();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const getUserProfile = async (uid: string) => {
+  try {
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    return userSnap.data();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `users/${uid}`);
+  }
+};
+
+export const getAllUsers = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map(doc => doc.data());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'users');
+  }
+};
+
+export const updateUserTier = async (uid: string, tier: string) => {
+  try {
+    await updateDoc(doc(db, 'users', uid), { tier });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
+export const addCommunityContent = async (content: any) => {
+  try {
+    await addDoc(collection(db, 'content'), {
+      ...content,
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'content');
+  }
+};
+
+export const getCommunityContent = async () => {
+  try {
+    const q = query(collection(db, 'content'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'content');
+  }
+};
+
+export const requestConsultation = async (uid: string, name: string, email: string, message: string) => {
+  try {
+    await addDoc(collection(db, 'consultations'), {
+      userUid: uid,
+      userName: name,
+      userEmail: email,
+      message,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'consultations');
+  }
+};
+
+export const getConsultations = async () => {
+  try {
+    const q = query(collection(db, 'consultations'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'consultations');
+  }
+};
+
 export const saveEntry = async (name: string, email: string) => {
   const path = 'entries';
   try {
@@ -69,5 +165,20 @@ export const saveEntry = async (name: string, email: string) => {
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const getEntries = async () => {
+  const path = 'entries';
+  try {
+    const q = query(collection(db, path), orderBy('timestamp', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as any[];
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
   }
 };
