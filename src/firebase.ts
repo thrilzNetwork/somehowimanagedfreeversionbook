@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, addDoc, setDoc, doc, getDoc, serverTimestamp, getDocs, query, orderBy, where, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, setDoc, doc, getDoc, serverTimestamp, getDocs, query, orderBy, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase SDK
@@ -157,6 +157,22 @@ export const updateCareerMindmap = async (uid: string, mindmap: string) => {
     await updateDoc(doc(db, 'users', uid), { careerMindmap: mindmap });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
+export const deleteContent = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, 'content', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `content/${id}`);
+  }
+};
+
+export const deleteUser = async (uid: string) => {
+  try {
+    await deleteDoc(doc(db, 'users', uid));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
   }
 };
 

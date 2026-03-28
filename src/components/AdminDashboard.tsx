@@ -22,7 +22,7 @@ import {
   Headphones,
   LogOut
 } from 'lucide-react';
-import { auth, googleProvider, getEntries, getAllUsers, updateUserTier, addCommunityContent, getCommunityContent, getConsultations } from '../firebase';
+import { auth, googleProvider, getEntries, getAllUsers, updateUserTier, addCommunityContent, getCommunityContent, getConsultations, deleteContent, deleteUser } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 
 interface AdminDashboardProps {
@@ -112,6 +112,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
       setCommunityUsers(prev => prev.map(u => u.uid === uid ? { ...u, tier: newTier } : u));
     } catch (err) {
       console.error('Tier update error:', err);
+    }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+      await deleteUser(uid);
+      setCommunityUsers(prev => prev.filter(u => u.uid !== uid));
+    } catch (err) {
+      console.error('Delete user error:', err);
+    }
+  };
+
+  const handleDeleteContent = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this content?')) return;
+    try {
+      await deleteContent(id);
+      setContent(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      console.error('Delete content error:', err);
     }
   };
 
@@ -302,6 +322,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
                                 {t}
                               </button>
                             ))}
+                            <button 
+                              onClick={() => handleDeleteUser(u.uid)}
+                              className="rounded-full p-2 text-red-500/40 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
                         </div>
                         <div className="mt-4 pt-4 border-t border-white/5 text-xs text-white/60">
@@ -419,7 +445,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
                             <div className="text-[10px] text-white/40">{item.minTier} tier · {item.type}</div>
                           </div>
                         </div>
-                        <button className="text-red-500/40 hover:text-red-500 transition-colors">
+                        <button 
+                          onClick={() => handleDeleteContent(item.id)}
+                          className="text-red-500/40 hover:text-red-500 transition-colors"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>

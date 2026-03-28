@@ -190,8 +190,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                   try {
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     await updateProfile(userCredential.user, { displayName: name });
-                    alert('Thank you for signing up!');
-                    window.location.reload();
+                    // No reload needed, onAuthStateChanged will handle the state update
                   } catch (err: any) {
                     console.error('Sign up error:', err);
                     alert(err.message || 'Sign up failed. Please try again.');
