@@ -214,14 +214,19 @@ export default function App() {
       setUser(currentUser);
       if (currentUser) {
         const userProfile = await getUserProfile(currentUser.uid);
-        setProfile(userProfile);
-        // Open admin dashboard after auth restores if on /admin route
+        setProfile(userProfile || null);
+        // Close sign-in gate if it was open (e.g. session restored mid-gate)
+        setIsSignUpModalOpen(false);
+        // Restore admin dashboard on /admin page reload
         if (window.location.pathname === '/admin' && currentUser.email === 'thrilznetwork@gmail.com') {
           setIsAdminOpen(true);
         }
-      } else if (window.location.pathname === '/admin') {
-        // Not logged in on /admin — prompt sign-in
-        setIsSignUpModalOpen(true);
+      } else {
+        setProfile(null);
+        // Prompt sign-in only on /admin when unauthenticated
+        if (window.location.pathname === '/admin') {
+          setIsSignUpModalOpen(true);
+        }
       }
     });
     return () => unsubscribe();
@@ -523,9 +528,12 @@ export default function App() {
         <EntryGate
           onAccessGranted={() => {
             setIsSignUpModalOpen(false);
-            if (window.location.pathname === '/admin' && auth.currentUser?.email === 'thrilznetwork@gmail.com') {
+            const isAdmin = auth.currentUser?.email === 'thrilznetwork@gmail.com';
+            const isAdminRoute = window.location.pathname === '/admin';
+            if (isAdminRoute && isAdmin) {
               setIsAdminOpen(true);
-            } else {
+            } else if (!isAdminRoute) {
+              // Always open member area after sign-in (non-admin, non-admin route)
               setIsCommunityOpen(true);
             }
           }}

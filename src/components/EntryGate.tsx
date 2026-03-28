@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, User, ArrowRight, Loader2, AlertCircle, Sparkles } from 'lucide-react';
-import { signInWithPopup, signInAnonymously, updateProfile } from 'firebase/auth';
+import { signInWithPopup, signInAnonymously, updateProfile, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider, syncUser, saveEntry } from '../firebase';
 
 interface EntryGateProps {
@@ -17,21 +17,30 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
 
-  useEffect(() => {
-    const accessGranted = sessionStorage.getItem('immersive_access_granted');
-    if (accessGranted === 'true') {
-      setIsVisible(false);
-      onAccessGranted();
-    }
-  }, [onAccessGranted]);
+  // Prevent double-calling onAccessGranted (from session restore + explicit sign-in)
+  const hasGranted = useRef(false);
+  // Prevent session-restore from calling grantAccess while we're mid-sign-in
+  const isHandlingAuth = useRef(false);
 
   const grantAccess = () => {
-    sessionStorage.setItem('immersive_access_granted', 'true');
+    if (hasGranted.current) return;
+    hasGranted.current = true;
     setIsVisible(false);
-    setTimeout(() => onAccessGranted(), 500);
+    onAccessGranted();
   };
 
+  // Auto-dismiss gate if Firebase already has a session (returning user)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser && !isHandlingAuth.current) {
+        grantAccess();
+      }
+    });
+    return () => unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleGoogleSignIn = async () => {
+    isHandlingAuth.current = true;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -47,6 +56,7 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
         setError('Google sign-in failed. Please try again.');
       }
     } finally {
+      isHandlingAuth.current = false;
       setIsSubmitting(false);
     }
   };
@@ -57,19 +67,18 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
       setError('Please fill in all fields.');
       return;
     }
+    isHandlingAuth.current = true;
     setIsSubmitting(true);
     setError(null);
     try {
-      // Sign in anonymously so auth.currentUser is set
+      // Sign in anonymously to get a Firebase UID
       const result = await signInAnonymously(auth);
-      // Attach the display name to the anonymous user
       await updateProfile(result.user, { displayName: name.trim() });
-      // Save their name + email to entries collection
-      await saveEntry(name.trim(), email.trim());
-      // Sync a basic user profile
+      // Save entry + sync Firestore profile BEFORE granting access
       const referrerCode = localStorage.getItem('quantum_referrer');
+      await saveEntry(name.trim(), email.trim());
       await syncUser(
-        { ...result.user, displayName: name.trim(), email: email.trim() },
+        { ...result.user, displayName: name.trim(), email: email.trim() } as any,
         referrerCode
       );
       grantAccess();
@@ -77,6 +86,7 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
       console.error('Email entry error:', err);
       setError('Something went wrong. Please try again.');
     } finally {
+      isHandlingAuth.current = false;
       setIsSubmitting(false);
     }
   };
