@@ -39,7 +39,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
   const [content, setContent] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'feed' | 'hire' | 'books' | 'profile'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'hire' | 'books' | 'blog' | 'profile'>('feed');
   
   // Career Profile State
   const [careerText, setCareerText] = useState('');
@@ -138,9 +138,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     return userTierIndex >= itemTierIndex;
   });
 
-  const feedItems = filteredContent.filter(i => i.type === 'drop' || i.type === 'price' || i.type === 'podcast' || i.type === 'blog');
+  const feedItems = filteredContent.filter(i => i.type === 'drop' || i.type === 'price' || i.type === 'podcast');
   const hireItems = filteredContent.filter(i => i.type === 'job');
   const bookItems = filteredContent.filter(i => i.type === 'pdf');
+  const blogItems = filteredContent.filter(i => i.type === 'blog');
 
   return (
     <motion.div
@@ -228,6 +229,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                   className={`flex-shrink-0 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'books' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
                   Free Books
+                </button>
+                <button 
+                  onClick={() => setActiveTab('blog')}
+                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'blog' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                >
+                  Blog
                 </button>
                 <button 
                   onClick={() => setActiveTab('profile')}
@@ -382,6 +389,47 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                     {bookItems.length === 0 && (
                       <div className="col-span-full rounded-xl border border-dashed border-white/10 p-6 md:p-10 text-center text-white/20">
                         No PDF resources available for your tier.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'blog' && (
+                <div className="space-y-6">
+                  <h3 className="font-serif text-2xl font-bold text-white">Blog</h3>
+                  <div className="grid grid-cols-1 gap-6">
+                    {blogItems.map(item => (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={item.id} 
+                        className="rounded-xl border border-white/5 bg-white/[0.03] p-6"
+                      >
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-[1px] text-gold">Blog</span>
+                          <span className="text-[10px] text-white/20">{item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recently'}</span>
+                        </div>
+                        {item.imageUrl && (
+                          <img 
+                            src={item.imageUrl} 
+                            alt={item.title} 
+                            className="mb-4 w-full h-48 object-cover rounded-lg"
+                            referrerPolicy="no-referrer"
+                          />
+                        )}
+                        <h4 className="mb-2 text-xl font-bold text-white">{item.title}</h4>
+                        <p className="text-sm leading-relaxed text-white/60">{item.body}</p>
+                        {item.url && (
+                          <a href={item.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-gold hover:underline">
+                            Read More <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </motion.div>
+                    ))}
+                    {blogItems.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-white/10 p-6 md:p-10 text-center text-white/20">
+                        No blog posts available yet.
                       </div>
                     )}
                   </div>

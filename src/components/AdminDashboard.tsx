@@ -50,7 +50,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
     body: '',
     type: 'drop',
     minTier: 'basic',
-    url: ''
+    url: '',
+    imageUrl: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -344,6 +345,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
                         placeholder="URL (optional)"
                         value={newContent.url}
                         onChange={e => setNewContent({...newContent, url: e.target.value})}
+                        className="rounded-lg border border-white/10 bg-black/40 p-3 text-sm text-white focus:border-gold/50 outline-none"
+                      />
+                      <input 
+                        placeholder="Image URL (optional)"
+                        value={newContent.imageUrl}
+                        onChange={e => setNewContent({...newContent, imageUrl: e.target.value})}
                         className="rounded-lg border border-white/10 bg-black/40 p-3 text-sm text-white focus:border-gold/50 outline-none"
                       />
                       <select 
