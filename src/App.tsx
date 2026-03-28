@@ -520,11 +520,15 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
       {isSignUpModalOpen && (
-        <EntryGate 
+        <EntryGate
           onAccessGranted={() => {
             setIsSignUpModalOpen(false);
-            setIsCommunityOpen(true);
-          }} 
+            if (window.location.pathname === '/admin' && auth.currentUser?.email === 'thrilznetwork@gmail.com') {
+              setIsAdminOpen(true);
+            } else {
+              setIsCommunityOpen(true);
+            }
+          }}
           hasApiKey={hasApiKey}
           onSelectKey={handleOpenSelectKey}
         />
