@@ -44,6 +44,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
   // Career Profile State
   const [careerText, setCareerText] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [mindmap, setMindmap] = useState<string | null>(null);
   const [isGeneratingMindmap, setIsGeneratingMindmap] = useState(false);
   
@@ -91,6 +92,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     try {
       await updateCareerProfile(user.uid, careerText);
       setProfile(prev => ({ ...prev, careerProfile: careerText }));
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
     } catch (err) {
       console.error('Error saving profile:', err);
     } finally {
@@ -405,10 +408,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                         <button 
                           onClick={handleSaveProfile}
                           disabled={isSavingProfile || !careerText.trim()}
-                          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-4 text-xs font-bold uppercase tracking-[1px] text-black hover:bg-yellow disabled:opacity-50 transition-all"
+                          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-4 text-xs font-bold uppercase tracking-[1px] transition-all ${isSaved ? 'bg-emerald-500 text-white' : 'bg-gold text-black hover:bg-yellow'} disabled:opacity-50 border border-gold/50`}
                         >
-                          {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                          Save Profile
+                          {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : isSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                          {isSaved ? "Saved!" : "Save Profile"}
                         </button>
                         
                         <button 

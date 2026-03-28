@@ -1318,6 +1318,15 @@ export default function App() {
                   href="https://www.linkedin.com/in/alejandro-soria-3a849915a" 
                   target="_blank" 
                   rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                      e.preventDefault();
+                      window.location.href = 'linkedin://in/alejandro-soria-3a849915a';
+                      setTimeout(() => {
+                        window.location.href = 'https://www.linkedin.com/in/alejandro-soria-3a849915a';
+                      }, 500);
+                    }
+                  }}
                   className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 font-mono text-xs tracking-wider text-gold transition-colors hover:bg-gold hover:text-black md:rounded-none md:px-4 md:py-2"
                 >
                   <Linkedin className="h-3 w-3" />
