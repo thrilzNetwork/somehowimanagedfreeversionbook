@@ -26,11 +26,13 @@ import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'fireb
 
 interface AdminDashboardProps {
   onClose: () => void;
+  generateChapterImage: (prompt: string, chapterId: string) => Promise<boolean>;
+  chapters: any[];
 }
 
 const ADMIN_EMAIL = "thrilznetwork@gmail.com";
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generateChapterImage, chapters }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [entries, setEntries] = useState<any[]>([]);
   const [communityUsers, setCommunityUsers] = useState<any[]>([]);
@@ -219,7 +221,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="font-serif text-2xl font-bold text-white">Email Entries</h3>
-                    <button className="text-[10px] font-bold uppercase tracking-[1px] text-gold hover:underline">Export CSV</button>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={async () => {
+                          for (const chapter of chapters) {
+                            await generateChapterImage(chapter.prompt, chapter.id);
+                          }
+                        }}
+                        className="text-[10px] font-bold uppercase tracking-[1px] text-gold hover:underline"
+                      >
+                        Generate All Images
+                      </button>
+                      <button className="text-[10px] font-bold uppercase tracking-[1px] text-gold hover:underline">Export CSV</button>
+                    </div>
                   </div>
                   <div className="overflow-x-auto overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]">
                     <table className="w-full text-left text-sm whitespace-nowrap">

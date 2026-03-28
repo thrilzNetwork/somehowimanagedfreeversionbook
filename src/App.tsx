@@ -186,7 +186,8 @@ export default function App() {
     }
   }, []);
 
-  const [isAccessGranted, setIsAccessGranted] = useState(false);
+  const [isAccessGranted, setIsAccessGranted] = useState(true);
+  const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -251,9 +252,16 @@ export default function App() {
   const isProcessingQueue = useRef(false);
   const isPaused = useRef(false);
 
+  const handleOpenCommunity = () => {
+    if (auth.currentUser) {
+      setIsCommunityOpen(true);
+    } else {
+      setIsSignUpModalOpen(true);
+    }
+  };
+
   useEffect(() => {
     const handleOpenAdmin = () => setIsAdminOpen(true);
-    const handleOpenCommunity = () => setIsCommunityOpen(true);
     window.addEventListener('open-admin', handleOpenAdmin);
     window.addEventListener('open-community', handleOpenCommunity);
     return () => {
@@ -495,11 +503,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
-      <EntryGate 
-        onAccessGranted={() => setIsAccessGranted(true)} 
-        hasApiKey={hasApiKey}
-        onSelectKey={handleOpenSelectKey}
-      />
+      {isSignUpModalOpen && (
+        <EntryGate 
+          onAccessGranted={() => {
+            setIsSignUpModalOpen(false);
+            setIsCommunityOpen(true);
+          }} 
+          hasApiKey={hasApiKey}
+          onSelectKey={handleOpenSelectKey}
+        />
+      )}
       
       <AnimatePresence>
         {isAccessGranted && (
@@ -516,7 +529,7 @@ export default function App() {
       <div className="mx-auto max-w-[820px] bg-black">
         
         {/* Cover Section */}
-        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] px-6 py-20 text-center md:px-16">
+        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] px-6 pt-10 pb-20 text-center md:px-16">
           <div className="absolute top-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
           <div className="absolute bottom-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
           
@@ -1490,7 +1503,11 @@ export default function App() {
       {/* Admin Dashboard Overlay */}
       <AnimatePresence>
         {isAdminOpen && (
-          <AdminDashboard onClose={() => setIsAdminOpen(false)} />
+          <AdminDashboard 
+            onClose={() => setIsAdminOpen(false)} 
+            generateChapterImage={generateChapterImage}
+            chapters={CHAPTERS}
+          />
         )}
       </AnimatePresence>
 
