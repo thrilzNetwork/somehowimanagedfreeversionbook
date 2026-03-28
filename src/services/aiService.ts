@@ -8,7 +8,7 @@ export const generateCareerMindmap = async (careerProfile: string) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-1.5-flash',
       contents: `You are Alejandro Soria, a world-class hospitality leader and mentor. 
       A member of your community has shared their career profile:
       "${careerProfile}"

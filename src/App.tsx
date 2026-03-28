@@ -66,7 +66,82 @@ const CHAPTERS = [
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry }: { src?: string, alt: string, isGenerating: boolean, explanation?: string, hasError?: boolean, onRetry?: () => void }) => {
+const CHAPTER_MOOD_COLORS: Record<string, string> = {
+  ch0: '#C9A84C', // warm gold — nostalgia
+  ch1: '#E8C547', // bright gold — grand opening
+  ch2: '#8B4513', // deep amber — darkness
+  ch3: '#B8860B', // dark goldenrod — boardroom power
+  ch4: '#DAA520', // goldenrod — warmth, team
+  ch5: '#CD853F', // peru — culinary warmth
+  ch6: '#4FC3F7', // electric blue — futuristic
+  ch7: '#6A5ACD', // slate blue — moody rain
+  ch8: '#FFA726', // sunrise orange — hope
+};
+
+const CinematicPlaceholder = ({ chapterId }: { chapterId?: string }) => {
+  const moodColor = CHAPTER_MOOD_COLORS[chapterId || 'ch0'] || '#C9A84C';
+
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#050505]">
+      {/* Floating particles */}
+      {Array.from({ length: 20 }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            width: Math.random() * 4 + 1,
+            height: Math.random() * 4 + 1,
+            background: moodColor,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            opacity: 0,
+          }}
+          animate={{
+            opacity: [0, 0.6, 0],
+            y: [0, -(30 + Math.random() * 60)],
+            x: [0, (Math.random() - 0.5) * 40],
+          }}
+          transition={{
+            duration: 3 + Math.random() * 4,
+            repeat: Infinity,
+            delay: Math.random() * 5,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+
+      {/* Slow light beam sweep */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(105deg, transparent 30%, ${moodColor}08 45%, ${moodColor}15 50%, ${moodColor}08 55%, transparent 70%)`,
+        }}
+        animate={{ x: ['-100%', '200%'] }}
+        transition={{ duration: 6, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
+      />
+
+      {/* Ambient glow at bottom */}
+      <motion.div
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-1/3 rounded-full blur-3xl pointer-events-none"
+        style={{ background: moodColor }}
+        animate={{ opacity: [0.03, 0.08, 0.03], scale: [0.9, 1.1, 0.9] }}
+        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
+      {/* Center subtle spinner */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          animate={{ opacity: [0.15, 0.3, 0.15] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: moodColor }} />
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry, chapterId }: { src?: string, alt: string, isGenerating: boolean, explanation?: string, hasError?: boolean, onRetry?: () => void, chapterId?: string }) => {
   return (
     <div className="relative mb-8 md:mb-12">
       <motion.div 
@@ -151,9 +226,7 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
             />
           </>
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-gold/20 italic font-serif px-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin opacity-20" />
-          </div>
+          <CinematicPlaceholder chapterId={chapterId} />
         )}
       </motion.div>
 
@@ -360,10 +433,10 @@ export default function App() {
     }
 
     // Use the Pro model as requested
-    const modelName = 'gemini-3-pro-image-preview';
+    const modelName = 'gemini-2.0-flash-preview-image-generation';
     
     // Create a fresh instance to ensure the latest API key is used
-    const currentAi = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const currentAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     
     setGeneratingImageId(chapterId);
     setErrorIds(prev => ({ ...prev, [chapterId]: false }));
@@ -456,11 +529,18 @@ export default function App() {
     if (!hasApiKey) {
       await handleOpenSelectKey();
     }
-    
-    // Clear existing images to ensure we see the new Pro versions
-    setChapterImages({});
-    
+
+    // Load existing images from Firestore first
+    const existingVisuals = await getChapterVisuals();
+    if (existingVisuals && Object.keys(existingVisuals).length > 0) {
+      setChapterImages(prev => ({ ...prev, ...existingVisuals }));
+    }
+
     for (const chapter of CHAPTERS) {
+      // Skip generation if Firestore already has this image
+      if (existingVisuals?.[chapter.id]?.imageUrl) {
+        continue;
+      }
       await generateChapterImage(chapter.prompt, chapter.id);
       // Increased delay between generations to respect rate limits
       await new Promise(r => setTimeout(r, 15000));
@@ -485,7 +565,7 @@ export default function App() {
     setExplainingId(chapterId);
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: `You are a helpful guide for a book about hospitality leadership titled "Somehow I  MANAGED" by Alejandro Soria. 
         The reader is looking at Chapter: "${title}". 
         Provide a brief, insightful, and sophisticated explanation (2-3 sentences) that helps the reader understand the core message or emotional weight of this chapter. 
@@ -660,6 +740,7 @@ export default function App() {
             explanation={explanations['ch0']}
             hasError={errorIds['ch0']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch0')?.prompt || '', 'ch0')}
+            chapterId="ch0"
           />
 
           <div className="markdown-body">
@@ -731,6 +812,7 @@ export default function App() {
             explanation={explanations['ch1']}
             hasError={errorIds['ch1']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch1')?.prompt || '', 'ch1')}
+            chapterId="ch1"
           />
           
           <div className="markdown-body">
@@ -809,6 +891,7 @@ export default function App() {
             explanation={explanations['ch2']}
             hasError={errorIds['ch2']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch2')?.prompt || '', 'ch2')}
+            chapterId="ch2"
           />
           
           <div className="markdown-body">
@@ -883,6 +966,7 @@ export default function App() {
             explanation={explanations['ch3']}
             hasError={errorIds['ch3']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch3')?.prompt || '', 'ch3')}
+            chapterId="ch3"
           />
           
           <div className="markdown-body">
@@ -978,6 +1062,7 @@ export default function App() {
             explanation={explanations['ch4']}
             hasError={errorIds['ch4']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch4')?.prompt || '', 'ch4')}
+            chapterId="ch4"
           />
           
           <div className="markdown-body">
@@ -1055,6 +1140,7 @@ export default function App() {
             explanation={explanations['ch5']}
             hasError={errorIds['ch5']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch5')?.prompt || '', 'ch5')}
+            chapterId="ch5"
           />
           
           <div className="markdown-body">
@@ -1122,6 +1208,7 @@ export default function App() {
             explanation={explanations['ch6']}
             hasError={errorIds['ch6']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch6')?.prompt || '', 'ch6')}
+            chapterId="ch6"
           />
           
           <div className="markdown-body">
@@ -1189,6 +1276,7 @@ export default function App() {
             explanation={explanations['ch7']}
             hasError={errorIds['ch7']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch7')?.prompt || '', 'ch7')}
+            chapterId="ch7"
           />
           
           <div className="markdown-body">
@@ -1259,6 +1347,7 @@ export default function App() {
             explanation={explanations['ch8']}
             hasError={errorIds['ch8']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch8')?.prompt || '', 'ch8')}
+            chapterId="ch8"
           />
           
           <div className="markdown-body">
