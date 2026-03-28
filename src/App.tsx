@@ -16,17 +16,31 @@ import {
   Loader2,
   ArrowUp,
   Menu,
+  Info,
+  ChevronDown,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
 
 const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 
+const CHAPTERS = [
+  { id: "ch0", title: "Foreword", prompt: "A young man cleaning a luxury hotel lobby at night, cinematic lighting" },
+  { id: "ch1", title: "Day Zero", prompt: "A grand hotel opening ceremony, red ribbon, architectural beauty" },
+  { id: "ch2", title: "The Turnaround", prompt: "A dark, empty hotel corridor with a single flickering light, cinematic" },
+  { id: "ch3", title: "The Money People", prompt: "A high-end boardroom meeting with city views, luxury aesthetic" },
+  { id: "ch4", title: "Your Team Is Everything", prompt: "A diverse hotel team standing together in a modern lobby, warm lighting" },
+  { id: "ch5", title: "F&B Is Not an Amenity", prompt: "A beautifully plated dish in a dimly lit, high-end hotel restaurant" },
+  { id: "ch6", title: "Modernization", prompt: "A futuristic hotel lobby with subtle holographic displays and warm wood accents" },
+  { id: "ch7", title: "Running on Empty", prompt: "A quiet, rainy night view from a hotel window, reflective and moody" },
+  { id: "ch8", title: "Closing Notes", prompt: "A sunrise over a beautiful hotel skyline, hopeful and bright" },
+];
+
 // Initialize Gemini
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string, isGenerating: boolean }) => {
+const LivingPortrait = ({ src, alt, isGenerating, explanation }: { src?: string, alt: string, isGenerating: boolean, explanation?: string }) => {
   return (
     <div className="relative mb-8 md:mb-12">
       <motion.div 
@@ -41,7 +55,7 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-gold" />
-              <span className="font-mono text-[10px] tracking-[2px] uppercase text-gold/60">Brewing visual magic...</span>
+              <span className="font-mono text-[10px] tracking-[2px] uppercase text-gold/60">Developing visual...</span>
             </div>
           </div>
         )}
@@ -59,35 +73,32 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
               className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-transparent mix-blend-overlay" 
             />
             
-            {/* Magical Shimmer Effect */}
+            {/* Cinematic Shimmer Effect */}
             <motion.div 
               animate={{ 
                 x: ['-100%', '200%'],
-                opacity: [0, 0.3, 0]
+                opacity: [0, 0.2, 0]
               }}
-              transition={{ duration: 5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-              className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-transparent via-gold/10 to-transparent skew-x-12" 
+              transition={{ duration: 8, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
+              className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-transparent via-gold/5 to-transparent skew-x-12" 
             />
-
-            {/* Dust/Grain Overlay */}
-            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] mix-blend-screen" />
 
             <motion.img 
               src={src} 
               alt={alt} 
-              className="w-full h-full object-cover sepia-[0.15] brightness-[0.9] contrast-[1.05]"
+              className="w-full h-full object-cover brightness-[0.9] contrast-[1.05]"
               animate={{
-                scale: [1, 1.02, 1],
+                scale: [1, 1.01, 1],
                 filter: [
-                  'sepia(0.15) brightness(0.9) contrast(1.05)',
-                  'sepia(0.2) brightness(0.95) contrast(1.1)',
-                  'sepia(0.15) brightness(0.9) contrast(1.05)'
+                  'brightness(0.9) contrast(1.05)',
+                  'brightness(0.95) contrast(1.1)',
+                  'brightness(0.9) contrast(1.05)'
                 ],
-                x: [-1, 1, -1],
-                y: [-1, 1, -1]
+                x: [-0.5, 0.5, -0.5],
+                y: [-0.5, 0.5, -0.5]
               }}
               transition={{
-                duration: 15,
+                duration: 20,
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
@@ -96,11 +107,28 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
           </>
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-gold/20 italic font-serif px-8 text-center">
-            <Sparkles className="h-8 w-8 opacity-20" />
-            <p className="text-sm">Click "Visualize" to bring this chapter to life with a magical living portrait.</p>
+            <Loader2 className="h-8 w-8 animate-spin opacity-20" />
+            <p className="text-sm">Developing cinematic visual...</p>
           </div>
         )}
       </motion.div>
+
+      <AnimatePresence>
+        {explanation && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mt-4 rounded-lg border border-gold/10 bg-gold/5 p-6 font-serif text-sm italic leading-relaxed text-white/70"
+          >
+            <div className="mb-2 flex items-center gap-2 font-mono text-[10px] tracking-[2px] uppercase text-gold">
+              <Info className="h-3 w-3" />
+              Guide Note
+            </div>
+            {explanation}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -108,7 +136,9 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
 export default function App() {
   const [copied, setCopied] = useState(false);
   const [chapterImages, setChapterImages] = useState<Record<string, string>>({});
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
+  const [explainingId, setExplainingId] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [calcRevenue, setCalcRevenue] = useState(10000);
   const [calcGop, setCalcGop] = useState(6000);
@@ -120,6 +150,17 @@ export default function App() {
       setScrollProgress(progress);
     };
     window.addEventListener("scroll", handleScroll);
+    
+    // Auto-generate all images on load
+    const generateAll = async () => {
+      for (const chapter of CHAPTERS) {
+        await generateChapterImage(chapter.prompt, chapter.id);
+        // Small delay to avoid hitting rate limits too hard
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    };
+    generateAll();
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -130,16 +171,14 @@ export default function App() {
   };
 
   const generateChapterImage = async (prompt: string, chapterId: string) => {
-    if (!ai) {
-      console.error("Gemini API key is missing. Please set GEMINI_API_KEY in your environment variables.");
-      return;
-    }
+    if (!ai || chapterImages[chapterId]) return;
+    
     setGeneratingImageId(chapterId);
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A magical Harry Potter style living portrait. Theme: ${prompt}. The subject should appear as if they are subtly moving or breathing. Style: Cinematic, moody lighting, dark background, high-end editorial, deep blacks and gold accents. No frame, full bleed image.` }],
+          parts: [{ text: `Cinematic, high-end professional photography, realistic, shallow depth of field, warm lighting, sophisticated, moody, high-quality, deep blacks and gold accents. Subject: ${prompt}. No frame, full bleed image.` }],
         },
         config: {
           imageConfig: {
@@ -159,6 +198,29 @@ export default function App() {
       console.error("Image Generation Error:", error);
     } finally {
       setGeneratingImageId(null);
+    }
+  };
+
+  const generateExplanation = async (chapterId: string, title: string) => {
+    if (!ai || explanations[chapterId]) return;
+    
+    setExplainingId(chapterId);
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `You are a helpful guide for a book about hospitality leadership titled "Somehow I Managed" by Alejandro Soria. 
+        The reader is looking at Chapter: "${title}". 
+        Provide a brief, insightful, and sophisticated explanation (2-3 sentences) that helps the reader understand the core message or emotional weight of this chapter. 
+        Keep it professional, encouraging, and cinematic in tone.`,
+      });
+
+      if (response.text) {
+        setExplanations(prev => ({ ...prev, [chapterId]: response.text }));
+      }
+    } catch (error) {
+      console.error("Explanation Generation Error:", error);
+    } finally {
+      setExplainingId(null);
     }
   };
 
@@ -279,11 +341,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">00 · Foreword</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A young man cleaning a luxury hotel lobby at night, cinematic lighting", "ch0")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch0", "The Houseman Who Fell in Love")}
+                disabled={explainingId === 'ch0'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch0' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch0' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -297,6 +360,7 @@ export default function App() {
             src={chapterImages['ch0']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch0'} 
+            explanation={explanations['ch0']}
           />
 
           <div className="markdown-body">
@@ -346,11 +410,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">01 · Day Zero</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A grand hotel opening ceremony, red ribbon, architectural beauty", "ch1")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch1", "Opening a Hotel From Scratch")}
+                disabled={explainingId === 'ch1'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch1' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch1' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -364,6 +429,7 @@ export default function App() {
             src={chapterImages['ch1']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch1'} 
+            explanation={explanations['ch1']}
           />
           
           <div className="markdown-body">
@@ -420,11 +486,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">02 · The Turnaround</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A dark, empty hotel hotel corridor with a single flickering light, cinematic", "ch2")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch2", "Walking Into a Broken Property")}
+                disabled={explainingId === 'ch2'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch2' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch2' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -438,6 +505,7 @@ export default function App() {
             src={chapterImages['ch2']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch2'} 
+            explanation={explanations['ch2']}
           />
           
           <div className="markdown-body">
@@ -490,11 +558,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">03 · The Money People</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A high-end boardroom meeting with city views, luxury aesthetic", "ch3")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch3", "Managing Ownership & Investors")}
+                disabled={explainingId === 'ch3'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch3' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch3' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -508,6 +577,7 @@ export default function App() {
             src={chapterImages['ch3']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch3'} 
+            explanation={explanations['ch3']}
           />
           
           <div className="markdown-body">
@@ -565,11 +635,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">04 · People First</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A diverse hotel team standing together in a modern lobby, warm lighting", "ch4")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch4", "Your Team Is Everything")}
+                disabled={explainingId === 'ch4'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch4' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch4' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -583,6 +654,7 @@ export default function App() {
             src={chapterImages['ch4']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch4'} 
+            explanation={explanations['ch4']}
           />
           
           <div className="markdown-body">
@@ -638,11 +710,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">05 · F&B Strategy</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A beautifully plated dish in a dimly lit, high-end hotel restaurant", "ch5")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch5", "F&B Is Not an Amenity")}
+                disabled={explainingId === 'ch5'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch5' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch5' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -656,6 +729,7 @@ export default function App() {
             src={chapterImages['ch5']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch5'} 
+            explanation={explanations['ch5']}
           />
           
           <div className="markdown-body">
@@ -701,11 +775,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">06 · Modernization</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A futuristic hotel lobby with subtle holographic displays and warm wood accents", "ch6")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch6", "The Last Industry to Modernize")}
+                disabled={explainingId === 'ch6'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch6' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch6' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -719,6 +794,7 @@ export default function App() {
             src={chapterImages['ch6']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch6'} 
+            explanation={explanations['ch6']}
           />
           
           <div className="markdown-body">
@@ -764,11 +840,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">07 · Resilience</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A quiet, rainy night view from a hotel window, reflective and moody", "ch7")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch7", "Running on Empty")}
+                disabled={explainingId === 'ch7'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch7' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch7' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -782,6 +859,7 @@ export default function App() {
             src={chapterImages['ch7']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch7'} 
+            explanation={explanations['ch7']}
           />
           
           <div className="markdown-body">
@@ -830,11 +908,12 @@ export default function App() {
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">08 · Closing Notes</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <button 
-                onClick={() => generateChapterImage("A sunrise over a beautiful hotel skyline, hopeful and bright", "ch8")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
+                onClick={() => generateExplanation("ch8", "What I Know Now")}
+                disabled={explainingId === 'ch8'}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold disabled:opacity-50 md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
-                {generatingImageId === 'ch8' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Visualize
+                {explainingId === 'ch8' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Info className="h-3 w-3" />}
+                Guide Me
               </button>
             </div>
           </div>
@@ -848,6 +927,7 @@ export default function App() {
             src={chapterImages['ch8']} 
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch8'} 
+            explanation={explanations['ch8']}
           />
           
           <div className="markdown-body">
