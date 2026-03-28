@@ -263,6 +263,11 @@ export default function App() {
   useEffect(() => {
     const handleOpenAdmin = () => setIsAdminOpen(true);
     window.addEventListener('open-admin', handleOpenAdmin);
+    
+    if (window.location.pathname === '/admin') {
+      setIsAdminOpen(true);
+    }
+    
     window.addEventListener('open-community', handleOpenCommunity);
     return () => {
       window.removeEventListener('open-admin', handleOpenAdmin);

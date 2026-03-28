@@ -23,10 +23,11 @@ import {
   Brain,
   Save,
   Sparkles,
-  Headphones
+  Headphones,
+  LogOut
 } from 'lucide-react';
-import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile } from '../firebase';
-import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap } from '../firebase';
+import { signInWithPopup, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { generateCareerMindmap } from '../services/aiService';
 
 interface UserDashboardProps {
@@ -102,11 +103,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
   };
 
   const handleGenerateMindmap = async () => {
-    if (!careerText.trim()) return;
+    if (!user || !careerText.trim()) return;
     setIsGeneratingMindmap(true);
     try {
       const result = await generateCareerMindmap(careerText);
       setMindmap(result);
+      await updateCareerMindmap(user.uid, result);
     } catch (err) {
       console.error('Error generating mindmap:', err);
     } finally {
@@ -162,12 +164,21 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
               <p className="text-[10px] uppercase tracking-[1px] text-white/30">Member Dashboard</p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => signOut(auth)}
+              className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {!user ? (
@@ -180,13 +191,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
               Join the Quantum Closed Community to access share prices, exclusive drops, and hire opportunities.
             </p>
             <button
-              onClick={handleLogin}
-              disabled={isAuthenticating}
-              className="flex items-center gap-2 rounded-lg bg-gold px-8 py-4 text-sm font-bold text-black transition-all hover:bg-yellow disabled:opacity-50"
-            >
-              {isAuthenticating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-              Sign in with Google
-            </button>
+                onClick={() => window.dispatchEvent(new CustomEvent('open-community'))}
+                className="flex items-center gap-2 rounded-lg bg-gold px-8 py-4 text-sm font-bold text-black transition-all hover:bg-yellow"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign Up
+              </button>
           </div>
         ) : isLoading ? (
           <div className="flex flex-1 items-center justify-center">

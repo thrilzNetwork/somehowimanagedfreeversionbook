@@ -152,6 +152,14 @@ export const updateCareerProfile = async (uid: string, careerProfile: string) =>
   }
 };
 
+export const updateCareerMindmap = async (uid: string, mindmap: string) => {
+  try {
+    await updateDoc(doc(db, 'users', uid), { careerMindmap: mindmap });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
 export const addCommunityContent = async (content: any) => {
   try {
     await addDoc(collection(db, 'content'), {

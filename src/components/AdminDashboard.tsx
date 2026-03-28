@@ -19,10 +19,11 @@ import {
   Trash2, 
   Zap, 
   ShieldCheck,
-  Headphones
+  Headphones,
+  LogOut
 } from 'lucide-react';
 import { auth, googleProvider, getEntries, getAllUsers, updateUserTier, addCommunityContent, getCommunityContent, getConsultations } from '../firebase';
-import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signInWithPopup, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -159,12 +160,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
               <p className="text-[10px] uppercase tracking-[1px] text-white/30">Management Console</p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => signOut(auth)}
+              className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {!isAdmin ? (
@@ -273,24 +283,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
                   <h3 className="font-serif text-2xl font-bold text-white">Community Members</h3>
                   <div className="grid grid-cols-1 gap-4">
                     {communityUsers.map((u) => (
-                      <div key={u.uid} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-4">
-                        <div className="flex items-center gap-4">
-                          <img src={u.photoURL} className="h-10 w-10 rounded-full" />
-                          <div>
-                            <div className="text-sm font-bold text-white">{u.name}</div>
-                            <div className="text-[10px] text-white/40">{u.email}</div>
+                      <div key={u.uid} className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <img src={u.photoURL} className="h-10 w-10 rounded-full" />
+                            <div>
+                              <div className="text-sm font-bold text-white">{u.name}</div>
+                              <div className="text-[10px] text-white/40">{u.email}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {['basic', 'premium', 'elite'].map((t) => (
+                              <button 
+                                key={t}
+                                onClick={() => handleTierUpdate(u.uid, t)}
+                                className={`rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[1px] transition-all ${u.tier === t ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                              >
+                                {t}
+                              </button>
+                            ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {['basic', 'premium', 'elite'].map((t) => (
-                            <button 
-                              key={t}
-                              onClick={() => handleTierUpdate(u.uid, t)}
-                              className={`rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[1px] transition-all ${u.tier === t ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-                            >
-                              {t}
-                            </button>
-                          ))}
+                        <div className="mt-4 pt-4 border-t border-white/5 text-xs text-white/60">
+                          <p className="font-bold mb-1">Roadmap / Career Info:</p>
+                          <p>{u.careerProfile || 'No roadmap info provided.'}</p>
+                          <div className="mt-2 flex gap-4 text-[10px] text-white/40">
+                            <span>Points: {u.points || 0}</span>
+                            <span>Joined: {u.joinedAt?.toDate ? u.joinedAt.toDate().toLocaleDateString() : 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
                     ))}

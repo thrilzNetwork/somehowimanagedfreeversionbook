@@ -153,15 +153,6 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
                 >
                   Community Access
                 </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('open-admin'));
-                  }}
-                  className="block mx-auto font-mono text-[7px] uppercase tracking-[1px] text-white/5 hover:text-gold/20 transition-colors"
-                >
-                  Admin Access
-                </button>
               </div>
             </div>
           </motion.div>
