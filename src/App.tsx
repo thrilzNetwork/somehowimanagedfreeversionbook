@@ -11,24 +11,20 @@ import {
   CheckSquare, 
   ExternalLink,
   MessageCircle,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
   Image as ImageIcon,
   Sparkles,
   Loader2,
-  Settings,
   ArrowUp,
   Menu,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 
 // Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const apiKey = process.env.GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string, isGenerating: boolean }) => {
   return (
@@ -111,62 +107,11 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
 
 export default function App() {
   const [copied, setCopied] = useState(false);
-  const [isNarrating, setIsNarrating] = useState(false);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [chapterImages, setChapterImages] = useState<Record<string, string>>({});
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [calcRevenue, setCalcRevenue] = useState(10000);
   const [calcGop, setCalcGop] = useState(6000);
-  const [selectedVoice, setSelectedVoice] = useState<'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Zephyr'>('Fenrir');
-  
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
-
-  const stopNarration = () => {
-    if (audioSourceRef.current) {
-      audioSourceRef.current.stop();
-      audioSourceRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    setIsNarrating(false);
-  };
-
-  const playPCM = async (base64Data: string) => {
-    stopNarration();
-    
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-    audioContextRef.current = audioContext;
-
-    const binaryString = atob(base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const arrayBuffer = bytes.buffer;
-    const dataView = new DataView(arrayBuffer);
-    const float32Data = new Float32Array(arrayBuffer.byteLength / 2);
-    
-    for (let i = 0; i < float32Data.length; i++) {
-      float32Data[i] = dataView.getInt16(i * 2, true) / 32768;
-    }
-
-    const audioBuffer = audioContext.createBuffer(1, float32Data.length, 24000);
-    audioBuffer.getChannelData(0).set(float32Data);
-
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    source.onended = () => setIsNarrating(false);
-    
-    audioSourceRef.current = source;
-    source.start();
-    setIsNarrating(true);
-  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -184,39 +129,11 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const generateNarration = async (text: string, chapterId: string) => {
-    if (isNarrating) {
-      stopNarration();
+  const generateChapterImage = async (prompt: string, chapterId: string) => {
+    if (!ai) {
+      console.error("Gemini API key is missing. Please set GEMINI_API_KEY in your environment variables.");
       return;
     }
-
-    setIsLoadingAudio(true);
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Read this chapter excerpt from "Somehow I Managed" with a professional, warm, and authoritative hospitality leader voice. Use natural pacing, emphasize key management terms, and sound like a mentor: ${text.substring(0, 1000)}` }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: selectedVoice },
-            },
-          },
-        },
-      });
-
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        await playPCM(base64Audio);
-      }
-    } catch (error) {
-      console.error("TTS Error:", error);
-    } finally {
-      setIsLoadingAudio(false);
-    }
-  };
-
-  const generateChapterImage = async (prompt: string, chapterId: string) => {
     setGeneratingImageId(chapterId);
     try {
       const response = await ai.models.generateContent({
@@ -286,33 +203,6 @@ export default function App() {
             
             <div className="font-serif text-lg tracking-wider text-white/55 md:text-xl">
               Alejandro Soria
-            </div>
-
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-black/40 px-3 py-1">
-                <Settings className="h-3 w-3 text-gold/60" />
-                <select 
-                  value={selectedVoice}
-                  onChange={(e) => setSelectedVoice(e.target.value as any)}
-                  className="bg-transparent font-mono text-[9px] tracking-[1px] uppercase text-gold/80 outline-none"
-                >
-                  <option value="Fenrir">Fenrir (Authoritative)</option>
-                  <option value="Kore">Kore (Warm)</option>
-                  <option value="Zephyr">Zephyr (Professional)</option>
-                  <option value="Puck">Puck (Energetic)</option>
-                  <option value="Charon">Charon (Deep)</option>
-                </select>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => generateNarration("Welcome to Somehow I Managed. I'm Alejandro Soria.", "intro")}
-                className="flex items-center gap-3 rounded-full border border-gold/30 bg-gold/10 px-6 py-3 font-mono text-[10px] tracking-[2px] uppercase text-gold transition-all hover:bg-gold/20"
-              >
-                {isLoadingAudio ? <Loader2 className="h-4 w-4 animate-spin" /> : isNarrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                {isNarrating ? "Stop Narration" : "Listen to Intro"}
-              </motion.button>
             </div>
           </motion.div>
           
@@ -388,24 +278,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">00 · Foreword</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("The Houseman Who Fell in Love. Before anything else, let me be clear about what this book is and what it is not.", "ch0")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A young man cleaning a luxury hotel lobby at night, cinematic lighting", "ch0")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -473,24 +345,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">01 · Day Zero</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("Opening a Hotel From Scratch. You will never feel ready. Open anyway.", "ch1")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A grand hotel opening ceremony, red ribbon, architectural beauty", "ch1")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -565,24 +419,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">02 · The Turnaround</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("Walking Into a Broken Property. Don't fix what you see first. Understand what broke it.", "ch2")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A dark, empty hotel hotel corridor with a single flickering light, cinematic", "ch2")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -653,24 +489,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">03 · The Money People</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("Managing Ownership and Investors. They own the building. You run the building.", "ch3")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A high-end boardroom meeting with city views, luxury aesthetic", "ch3")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -746,24 +564,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">04 · People First</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("Your Team Is Everything. Real culture is what happens when you aren't in the room.", "ch4")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A diverse hotel team standing together in a modern lobby, warm lighting", "ch4")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -837,24 +637,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">05 · F&B Strategy</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("F&B Is Not an Amenity. Stop treating your restaurant like a loss leader.", "ch5")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A beautifully plated dish in a dimly lit, high-end hotel restaurant", "ch5")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -918,24 +700,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">06 · Modernization</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("The Last Industry to Modernize. Technology is not your enemy. It's your leverage.", "ch6")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A futuristic hotel lobby with subtle holographic displays and warm wood accents", "ch6")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -999,24 +763,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">07 · Resilience</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("Running on Empty. Burnout is real. Your family is more real.", "ch7")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A quiet, rainy night view from a hotel window, reflective and moody", "ch7")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -1083,24 +829,6 @@ export default function App() {
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">08 · Closing Notes</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <select 
-                value={selectedVoice}
-                onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
-              >
-                <option value="Fenrir">Fenrir</option>
-                <option value="Kore">Kore</option>
-                <option value="Zephyr">Zephyr</option>
-                <option value="Puck">Puck</option>
-                <option value="Charon">Charon</option>
-              </select>
-              <button 
-                onClick={() => generateNarration("What I Know Now. You are not just managing a building. You are managing a legacy.", "ch8")}
-                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
-              >
-                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
-                Listen
-              </button>
               <button 
                 onClick={() => generateChapterImage("A sunrise over a beautiful hotel skyline, hopeful and bright", "ch8")}
                 className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
@@ -1273,8 +1001,6 @@ export default function App() {
               {copied ? "Copied!" : "Copy Link"}
             </button>
           </div>
-          
-          <p className="mt-6 font-mono text-[8px] tracking-wider text-white/15 uppercase md:mt-4 md:text-[10px]">Audiobook coming soon</p>
         </section>
 
       </div>
