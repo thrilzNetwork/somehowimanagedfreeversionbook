@@ -8,7 +8,7 @@ export const FocusAudio: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const AUDIO_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"; // Focus-like track
+  const AUDIO_URL = "https://soundcloud.com/thrilz-network/music-focus"; // New Focus Track
 
   const togglePlay = () => {
     if (!audioRef.current) return;

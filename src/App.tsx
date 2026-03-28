@@ -23,6 +23,8 @@ import {
   Headphones,
   Volume2,
   VolumeX,
+  X,
+  Book,
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
@@ -163,6 +165,7 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
 
 export default function App() {
   const [isAccessGranted, setIsAccessGranted] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [chapterImages, setChapterImages] = useState<Record<string, string>>(STATIC_CHAPTER_IMAGES);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
@@ -1226,25 +1229,55 @@ export default function App() {
       
       {/* Fixed Navigation Menu */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 md:bottom-10 md:right-10">
-        <FocusAudio />
-        
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              className="flex flex-col items-end gap-3"
+            >
+              <FocusAudio />
+              
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setIsMenuOpen(false);
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-gold text-black shadow-lg shadow-gold/20 transition-colors hover:bg-yellow"
+                title="Scroll to Top"
+              >
+                <ArrowUp className="h-5 w-5" />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  document.getElementById('toc')?.scrollIntoView({ behavior: 'smooth' });
+                  setIsMenuOpen(false);
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg shadow-white/10 transition-colors hover:bg-white/90"
+                title="Table of Contents"
+              >
+                <Book className="h-5 w-5" />
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-gold text-black shadow-lg shadow-gold/20 transition-colors hover:bg-yellow"
-          title="Scroll to Top"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className={`flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 ${
+            isMenuOpen ? 'bg-white text-black' : 'bg-gold text-black shadow-gold/20 hover:bg-yellow'
+          }`}
+          title={isMenuOpen ? "Close Menu" : "Open Menu"}
         >
-          <ArrowUp className="h-5 w-5" />
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => document.getElementById('toc')?.scrollIntoView({ behavior: 'smooth' })}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg shadow-white/10 transition-colors hover:bg-white/90"
-          title="Table of Contents"
-        >
-          <Menu className="h-5 w-5" />
+          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </motion.button>
       </div>
 
