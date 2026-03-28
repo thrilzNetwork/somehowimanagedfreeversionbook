@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   Key, 
   Linkedin, 
@@ -15,14 +10,45 @@ import {
   Quote, 
   CheckSquare, 
   ExternalLink,
-  MessageCircle
+  MessageCircle,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Image as ImageIcon,
+  Sparkles,
+  Loader2
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 
+// Initialize Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
 export default function App() {
   const [copied, setCopied] = useState(false);
+  const [isNarrating, setIsNarrating] = useState(false);
+  const [currentChapterAudio, setCurrentChapterAudio] = useState<string | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [chapterImages, setChapterImages] = useState<Record<string, string>>({});
+  const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [calcRevenue, setCalcRevenue] = useState(10000);
+  const [calcGop, setCalcGop] = useState(6000);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (window.scrollY / totalHeight) * 100;
+      setScrollProgress(progress);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const copyLink = () => {
     navigator.clipboard.writeText(BOOK_URL);
@@ -30,12 +56,99 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const generateNarration = async (text: string, chapterId: string) => {
+    if (isNarrating) {
+      audioRef.current?.pause();
+      setIsNarrating(false);
+      return;
+    }
+
+    if (currentChapterAudio && audioRef.current) {
+      audioRef.current.play();
+      setIsNarrating(true);
+      return;
+    }
+
+    setIsLoadingAudio(true);
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: `Read this chapter excerpt from "Somehow I Managed" with a professional, warm, and authoritative hospitality leader voice: ${text.substring(0, 1000)}` }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Fenrir' }, // Strong, authoritative voice
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
+        setCurrentChapterAudio(audioUrl);
+        setIsNarrating(true);
+      }
+    } catch (error) {
+      console.error("TTS Error:", error);
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
+
+  const generateChapterImage = async (prompt: string, chapterId: string) => {
+    setGeneratingImageId(chapterId);
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [{ text: `A cinematic, high-end editorial photograph for a luxury hospitality management book. Theme: ${prompt}. Style: Moody lighting, professional, architectural, deep blacks and gold accents.` }],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "16:9",
+          },
+        },
+      });
+
+      for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+          const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          setChapterImages(prev => ({ ...prev, [chapterId]: imageUrl }));
+          break;
+        }
+      }
+    } catch (error) {
+      console.error("Image Generation Error:", error);
+    } finally {
+      setGeneratingImageId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (currentChapterAudio && audioRef.current) {
+      audioRef.current.play();
+    }
+  }, [currentChapterAudio]);
+
   const shareText = "This free book by Alejandro Soria is the manual I wish I had in hospitality. Somehow I Managed:";
   const encodedUrl = encodeURIComponent(BOOK_URL);
   const encodedText = encodeURIComponent(`${shareText} ${BOOK_URL}`);
 
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
+      <motion.div 
+        className="fixed top-0 left-0 z-[100] h-1 bg-gold" 
+        style={{ width: `${scrollProgress}%` }}
+      />
+      <audio 
+        ref={audioRef} 
+        src={currentChapterAudio || undefined} 
+        onEnded={() => setIsNarrating(false)}
+        className="hidden"
+      />
+
       <div className="mx-auto max-w-[820px] bg-black">
         
         {/* Cover Section */}
@@ -67,6 +180,16 @@ export default function App() {
             <div className="font-serif text-lg tracking-wider text-white/55 md:text-xl">
               Alejandro Soria
             </div>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => generateNarration("Welcome to Somehow I Managed. I'm Alejandro Soria.", "intro")}
+              className="mt-12 flex items-center gap-3 rounded-full border border-gold/30 bg-gold/10 px-6 py-3 font-mono text-[10px] tracking-[2px] uppercase text-gold transition-all hover:bg-gold/20"
+            >
+              {isLoadingAudio ? <Loader2 className="h-4 w-4 animate-spin" /> : isNarrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              {isNarrating ? "Stop Narration" : "Listen to Intro"}
+            </motion.button>
           </motion.div>
           
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] tracking-[4px] uppercase text-white/10">
@@ -137,12 +260,43 @@ export default function App() {
 
         {/* Chapter 00 */}
         <section id="ch0" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">00 · Foreword</span>
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">00 · Foreword</span>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => generateNarration("The Houseman Who Fell in Love. Before anything else, let me be clear about what this book is and what it is not.", "ch0")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A young man cleaning a luxury hotel lobby at night, cinematic lighting", "ch0")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch0' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
           <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">The Houseman Who Fell in Love</h2>
           <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
             "I showed up thinking I was going to work in an office. I was. It just needed to be cleaned first."
           </span>
           
+          <AnimatePresence>
+            {chapterImages['ch0'] && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-12 overflow-hidden rounded-lg border border-white/10"
+              >
+                <img src={chapterImages['ch0']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="markdown-body">
             <p className="dropcap">
               Before anything else, let me be clear about what this book is and what it is not. I did not write this to inspire you to build a company. I did not write it to turn my journey into a template you should follow. There are enough books that try to do that. This is not one of them.
@@ -186,11 +340,42 @@ export default function App() {
 
         {/* Chapter 01 */}
         <section id="ch1" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">01 · Day Zero</span>
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">01 · Day Zero</span>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => generateNarration("Opening a Hotel From Scratch. You will never feel ready. Open anyway.", "ch1")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A grand hotel opening ceremony, red ribbon, architectural beauty", "ch1")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch1' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
           <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Opening a Hotel From Scratch</h2>
           <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
             "You will never feel ready. Open anyway. The hotel will finish building itself around you."
           </span>
+
+          <AnimatePresence>
+            {chapterImages['ch1'] && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-12 overflow-hidden rounded-lg border border-white/10"
+              >
+                <img src={chapterImages['ch1']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           <div className="markdown-body">
             <p className="dropcap">
@@ -224,16 +409,16 @@ export default function App() {
               <span className="mb-5 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Pre-Opening Checklist</span>
               <div className="space-y-2">
                 {[
-                  "Weeks 1–4: Brand approvals finalized, all department heads hired, PMS and POS configuration begun.",
-                  "Weeks 5–8: Full line staff hired, department training programs running, all safety certifications completed.",
-                  "Weeks 9–10: Full mock operations — front desk, F&B service, housekeeping turns, room service.",
-                  "Weeks 11–12: Soft open with invited guests only. Fix everything they find.",
-                  "Week 13+: Grand opening. You are not fully ready. Open anyway. Fix in motion."
+                  { id: 'task1', text: "Weeks 1–4: Brand approvals finalized, all department heads hired, PMS and POS configuration begun." },
+                  { id: 'task2', text: "Weeks 5–8: Full line staff hired, department training programs running, all safety certifications completed." },
+                  { id: 'task3', text: "Weeks 9–10: Full mock operations — front desk, F&B service, housekeeping turns, room service." },
+                  { id: 'task4', text: "Weeks 11–12: Soft open with invited guests only. Fix everything they find." },
+                  { id: 'task5', text: "Week 13+: Grand opening. You are not fully ready. Open anyway. Fix in motion." }
                 ].map((item, i) => (
-                  <div key={i} className="flex gap-3 border-b border-white/5 py-2 text-[15px] leading-relaxed text-white/80 last:border-none">
-                    <CheckSquare className="mt-1 h-4 w-4 flex-shrink-0 text-pink" />
-                    {item}
-                  </div>
+                  <label key={i} className="flex cursor-pointer gap-3 border-b border-white/5 py-2 text-[15px] leading-relaxed text-white/80 transition-colors hover:bg-white/5 last:border-none">
+                    <input type="checkbox" className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent text-pink accent-pink" />
+                    {item.text}
+                  </label>
                 ))}
               </div>
             </div>
@@ -242,38 +427,74 @@ export default function App() {
 
         {/* Chapter 02 */}
         <section id="ch2" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">02 · The Turnaround</span>
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">02 · The Turnaround</span>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => generateNarration("Walking Into a Broken Property. Don't fix what you see first. Understand what broke it.", "ch2")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A dark, empty hotel corridor with a single flickering light, cinematic", "ch2")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch2' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
           <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Walking Into a Broken Property</h2>
           <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
             "Don't fix what you see first. Understand what broke it."
           </span>
+
+          <AnimatePresence>
+            {chapterImages['ch2'] && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-12 overflow-hidden rounded-lg border border-white/10"
+              >
+                <img src={chapterImages['ch2']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           <div className="markdown-body">
             <p className="dropcap">
               The first time I walked into a genuinely distressed property, I made the mistake every new turnaround manager makes. I saw what was wrong and I started fixing it immediately — visibly, energetically, with the kind of motion I wanted ownership and the team to read as leadership. I fixed the wrong things. Confidently, efficiently, with full commitment — and I fixed the wrong things.
             </p>
-            <p>
-              The visible problems were symptoms. The actual cause was something quieter and deeper, embedded in how the team related to each other, in what had silently become normal. Activity looks like leadership. They have the same energy signature. But leadership without diagnosis is confident improvisation — and in a distressed property, that can reinforce the exact dynamics that created the crisis.
-            </p>
             
-            <div className="my-10 border-l-[3px] border-gold bg-[#0d0d0d] px-8 py-7">
-              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-gold">Framework — The 90-Day Turnaround Map</span>
-              <h4 className="mb-4 font-serif text-xl font-bold text-white">What to Do, When, and Why the Order Matters</h4>
-              <div className="space-y-4">
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] p-8">
+              <span className="mb-6 block font-mono text-[10px] tracking-[3px] uppercase text-gold">Interactive Framework — The 90-Day Turnaround Map</span>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                 {[
-                  { step: "D1–7", content: "Listen only. Walk every space, speak to every level, zero announcements, zero changes." },
-                  { step: "D8–14", content: "Diagnose root causes. The three actual causes beneath all visible symptoms." },
-                  { step: "D15–21", content: "Act on non-negotiables. Safety issues, toxic behavior, financial irregularities." },
-                  { step: "D22–30", content: "Present to ownership. Root causes, 90-day plan, what you need from them." },
-                  { step: "D31–90", content: "Execute, measure, adjust, communicate. Weekly ownership updates." }
+                  { step: "D1–7", title: "Listen", content: "Walk every space, speak to every level, zero announcements." },
+                  { step: "D8–14", title: "Diagnose", content: "Identify the three actual causes beneath all visible symptoms." },
+                  { step: "D15–21", title: "Act", content: "Address non-negotiables: safety, toxic behavior, irregularities." },
+                  { step: "D22–30", title: "Present", content: "Share root causes and 90-day plan with ownership." },
+                  { step: "D31–90", title: "Execute", content: "Measure, adjust, and maintain weekly communication." }
                 ].map((item, i) => (
-                  <div key={i} className="flex gap-4 border-b border-white/5 pb-4 last:border-none">
-                    <span className="min-w-[40px] font-mono text-[10px] text-yellow">{item.step}</span>
-                    <div className="text-[15px] leading-relaxed text-white/80">{item.content}</div>
-                  </div>
+                  <motion.div 
+                    key={i}
+                    whileHover={{ y: -5 }}
+                    className="group cursor-default rounded border border-white/5 bg-white/5 p-4 transition-colors hover:border-gold/30 hover:bg-gold/5"
+                  >
+                    <span className="mb-2 block font-mono text-[10px] text-yellow">{item.step}</span>
+                    <div className="mb-1 font-bold text-white group-hover:text-gold">{item.title}</div>
+                    <div className="text-[11px] leading-relaxed text-white/40">{item.content}</div>
+                  </motion.div>
                 ))}
               </div>
             </div>
+
+            <p>
+              The visible problems were symptoms. The actual cause was something quieter and deeper, embedded in how the team related to each other, in what had silently become normal. Activity looks like leadership. They have the same energy signature. But leadership without diagnosis is confident improvisation — and in a distressed property, that can reinforce the exact dynamics that created the crisis.
+            </p>
 
             <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-11 py-9">
               <Quote className="absolute top-6 left-6 h-20 w-20 text-gold opacity-10" />
@@ -289,11 +510,42 @@ export default function App() {
 
         {/* Chapter 03 */}
         <section id="ch3" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">03 · The Money People</span>
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">03 · The Money People</span>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => generateNarration("Managing Ownership and Investors. They own the building. You run the building.", "ch3")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A high-end boardroom meeting with city views, luxury aesthetic", "ch3")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch3' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
           <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Managing Ownership & Investors</h2>
           <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
             "They own the building. You run the building. These are not the same job."
           </span>
+
+          <AnimatePresence>
+            {chapterImages['ch3'] && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-12 overflow-hidden rounded-lg border border-white/10"
+              >
+                <img src={chapterImages['ch3']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           <div className="markdown-body">
             <p className="dropcap">
@@ -301,21 +553,36 @@ export default function App() {
             </p>
             
             <div className="my-10 bg-yellow p-8">
-              <span className="mb-2 block font-mono text-[10px] tracking-[3px] uppercase text-black/40">P&L Framework</span>
-              <h4 className="mb-5 font-serif text-xl font-bold text-black">Numbers Every GM Must Own</h4>
-              <div className="space-y-3">
-                {[
-                  "RevPAR Index (RGI) — your fair market share.",
-                  "GOP PAR — Gross Operating Profit Per Available Room.",
-                  "Flow-through — what percentage of incremental revenue reaches GOP.",
-                  "CPOR — Cost Per Occupied Room.",
-                  "Labor as % of Revenue — the most controllable cost line."
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-3 border-b border-black/10 py-2 text-[15px] leading-relaxed text-black/80 last:border-none">
-                    <ArrowRight className="mt-1 h-4 w-4 flex-shrink-0 text-black" />
-                    {item}
+              <span className="mb-2 block font-mono text-[10px] tracking-[3px] uppercase text-black/40">Demonstration — P&L Calculator</span>
+              <h4 className="mb-5 font-serif text-xl font-bold text-black">Test Your Flow-Through</h4>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">Incremental Revenue ($)</label>
+                    <input 
+                      type="number" 
+                      value={calcRevenue} 
+                      onChange={(e) => setCalcRevenue(Number(e.target.value))}
+                      className="w-full border-b border-black/20 bg-transparent py-2 font-mono text-xl font-bold text-black outline-none focus:border-black" 
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">Incremental GOP ($)</label>
+                    <input 
+                      type="number" 
+                      value={calcGop} 
+                      onChange={(e) => setCalcGop(Number(e.target.value))}
+                      className="w-full border-b border-black/20 bg-transparent py-2 font-mono text-xl font-bold text-black outline-none focus:border-black" 
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col items-center justify-center rounded border border-black/10 bg-black/5 p-6 text-center">
+                  <span className="mb-1 block text-[10px] font-bold uppercase text-black/40">Your Flow-Through</span>
+                  <span className="font-serif text-5xl font-black text-black">
+                    {calcRevenue > 0 ? Math.round((calcGop / calcRevenue) * 100) : 0}%
+                  </span>
+                  <div className="mt-2 text-[11px] font-medium text-black/60">A healthy benchmark for select-service hotels.</div>
+                </div>
               </div>
             </div>
 
