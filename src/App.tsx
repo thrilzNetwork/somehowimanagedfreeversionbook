@@ -1488,20 +1488,6 @@ export default function App() {
               >
                 <Book className="h-5 w-5" />
               </motion.button>
-
-              {/* Admin Button (Only visible if admin=true in URL or just hidden) */}
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => {
-                  setIsAdminOpen(true);
-                  setIsMenuOpen(false);
-                }}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/20 text-gold shadow-lg shadow-gold/10 transition-colors hover:bg-gold/30"
-                title="Admin Dashboard"
-              >
-                <Users className="h-5 w-5" />
-              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
