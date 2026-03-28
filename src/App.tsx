@@ -215,6 +215,13 @@ export default function App() {
       if (currentUser) {
         const userProfile = await getUserProfile(currentUser.uid);
         setProfile(userProfile);
+        // Open admin dashboard after auth restores if on /admin route
+        if (window.location.pathname === '/admin' && currentUser.email === 'thrilznetwork@gmail.com') {
+          setIsAdminOpen(true);
+        }
+      } else if (window.location.pathname === '/admin') {
+        // Not logged in on /admin — prompt sign-in
+        setIsSignUpModalOpen(true);
       }
     });
     return () => unsubscribe();
@@ -263,11 +270,6 @@ export default function App() {
   useEffect(() => {
     const handleOpenAdmin = () => setIsAdminOpen(true);
     window.addEventListener('open-admin', handleOpenAdmin);
-
-    if (window.location.pathname === '/admin' && auth.currentUser?.email === 'thrilznetwork@gmail.com') {
-      setIsAdminOpen(true);
-    }
-
     window.addEventListener('open-community', handleOpenCommunity);
     return () => {
       window.removeEventListener('open-admin', handleOpenAdmin);
