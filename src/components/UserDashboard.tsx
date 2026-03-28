@@ -166,7 +166,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
         </div>
 
         {!user ? (
-          <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center p-6 md:p-10 text-center">
             <div className="mb-6 h-20 w-20 rounded-full bg-gold/5 flex items-center justify-center text-gold">
               <ShieldCheck className="h-10 w-10" />
             </div>
@@ -206,28 +206,28 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex w-full gap-2 overflow-x-auto pb-2 md:w-auto md:pb-0 scrollbar-hide">
                 <button 
                   onClick={() => setActiveTab('feed')}
-                  className={`rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'feed' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'feed' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
                   Community Feed
                 </button>
                 <button 
                   onClick={() => setActiveTab('hire')}
-                  className={`rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'hire' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'hire' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
                   Hire Opps
                 </button>
                 <button 
                   onClick={() => setActiveTab('books')}
-                  className={`rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'books' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'books' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
                   Free Books
                 </button>
                 <button 
                   onClick={() => setActiveTab('profile')}
-                  className={`rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'profile' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'profile' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
                   My Profile
                 </button>
@@ -270,7 +270,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                   <div className="md:col-span-2 space-y-6">
                     <h3 className="font-serif text-2xl font-bold text-white">Latest Drops & Prices</h3>
                     {feedItems.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-white/10 p-10 text-center text-white/20">
+                      <div className="rounded-xl border border-dashed border-white/10 p-6 md:p-10 text-center text-white/20">
                         No updates for your tier yet.
                       </div>
                     ) : (
@@ -351,7 +351,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                       </div>
                     ))}
                     {hireItems.length === 0 && (
-                      <div className="col-span-full rounded-xl border border-dashed border-white/10 p-10 text-center text-white/20">
+                      <div className="col-span-full rounded-xl border border-dashed border-white/10 p-6 md:p-10 text-center text-white/20">
                         No active hire opportunities for your tier.
                       </div>
                     )}
@@ -376,7 +376,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                       </div>
                     ))}
                     {bookItems.length === 0 && (
-                      <div className="col-span-full rounded-xl border border-dashed border-white/10 p-10 text-center text-white/20">
+                      <div className="col-span-full rounded-xl border border-dashed border-white/10 p-6 md:p-10 text-center text-white/20">
                         No PDF resources available for your tier.
                       </div>
                     )}
@@ -434,12 +434,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
 
                     <div className="min-h-[400px] rounded-xl border border-white/5 bg-white/[0.01] p-6">
                       {!mindmap && !isGeneratingMindmap ? (
-                        <div className="flex h-full flex-col items-center justify-center text-center p-10">
+                        <div className="flex h-full flex-col items-center justify-center text-center p-6 md:p-10">
                           <Brain className="h-12 w-12 text-white/10 mb-4" />
                           <p className="text-sm text-white/20">Save your profile and request a mindmap to see your potential next moves in hospitality.</p>
                         </div>
                       ) : isGeneratingMindmap ? (
-                        <div className="flex h-full flex-col items-center justify-center text-center p-10">
+                        <div className="flex h-full flex-col items-center justify-center text-center p-6 md:p-10">
                           <Loader2 className="h-12 w-12 animate-spin text-gold mb-4" />
                           <p className="text-sm text-gold animate-pulse">Alejandro is analyzing your profile...</p>
                         </div>

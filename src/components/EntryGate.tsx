@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Key, Mail, User, ArrowRight, Loader2, AlertCircle, Chrome } from 'lucide-react';
+import { Key, Mail, User, ArrowRight, Loader2, AlertCircle, Chrome, Sparkles, ShieldCheck } from 'lucide-react';
 import { saveEntry, auth, googleProvider, syncUser } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 
 interface EntryGateProps {
   onAccessGranted: () => void;
+  hasApiKey: boolean;
+  onSelectKey: () => void;
 }
 
-export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
+export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted, hasApiKey, onSelectKey }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,13 +93,44 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
             {/* Header */}
             <div className="mb-8 text-center">
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-gold/20 bg-gold/5">
-                <Key className="h-7 w-7 text-gold" />
+                <Sparkles className="h-7 w-7 text-gold" />
               </div>
               <h1 className="mb-2 font-serif text-3xl font-black tracking-tight text-white">Unlock the Experience</h1>
               <p className="text-sm text-white/40">
                 Enter your details to begin the immersive journey of <span className="italic text-gold/60">Somehow I&nbsp;&nbsp;MANAGED</span>.
               </p>
             </div>
+
+            {/* API Key Selection (Mandatory for Pro Model) */}
+            {!hasApiKey && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 rounded-xl border border-gold/20 bg-gold/5 p-6 text-center"
+              >
+                <div className="mb-3 flex items-center justify-center gap-2 text-gold">
+                  <ShieldCheck className="h-5 w-5" />
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[2px]">Pro Visuals Enabled</span>
+                </div>
+                <p className="mb-4 text-[11px] leading-relaxed text-white/60">
+                  This experience uses <span className="text-gold">Gemini 3 Pro</span> for high-fidelity cinematic visuals. A paid Google Cloud API key is required.
+                </p>
+                <button
+                  onClick={onSelectKey}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[2px] text-gold border border-gold/30 hover:bg-gold/20 transition-all"
+                >
+                  Select API Key
+                </button>
+                <a 
+                  href="https://ai.google.dev/gemini-api/docs/billing" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-3 block text-[9px] text-white/30 hover:text-gold transition-colors"
+                >
+                  Learn about billing & keys
+                </a>
+              </motion.div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">

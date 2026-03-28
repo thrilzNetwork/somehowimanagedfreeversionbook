@@ -155,7 +155,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         </div>
 
         {!isAdmin ? (
-          <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center p-6 md:p-10 text-center">
             <div className="mb-6 rounded-full bg-red-500/10 p-4 text-red-500">
               <ShieldAlert className="h-10 w-10" />
             </div>
@@ -180,31 +180,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
             {/* Sidebar Tabs */}
             <div className="w-full border-b border-white/5 p-4 md:w-64 md:border-b-0 md:border-r">
-              <nav className="space-y-2">
+              <nav className="flex space-x-2 overflow-x-auto pb-2 md:flex-col md:space-x-0 md:space-y-2 md:pb-0 scrollbar-hide">
                 <button 
                   onClick={() => setActiveTab('entries')}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'entries' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                  className={`flex flex-shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'entries' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
                 >
                   <Users className="h-4 w-4" />
                   Email Entries
                 </button>
                 <button 
                   onClick={() => setActiveTab('users')}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'users' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                  className={`flex flex-shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'users' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
                 >
                   <Zap className="h-4 w-4" />
                   Community Tiers
                 </button>
                 <button 
                   onClick={() => setActiveTab('content')}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'content' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                  className={`flex flex-shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'content' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
                 >
                   <TrendingUp className="h-4 w-4" />
                   Content & Drops
                 </button>
                 <button 
                   onClick={() => setActiveTab('consultations')}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'consultations' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                  className={`flex flex-shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[1px] transition-all ${activeTab === 'consultations' ? 'bg-gold/10 text-gold' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
                 >
                   <MessageSquare className="h-4 w-4" />
                   Consultations
@@ -220,8 +220,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <h3 className="font-serif text-2xl font-bold text-white">Email Entries</h3>
                     <button className="text-[10px] font-bold uppercase tracking-[1px] text-gold hover:underline">Export CSV</button>
                   </div>
-                  <div className="overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]">
-                    <table className="w-full text-left text-sm">
+                  <div className="overflow-x-auto overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="border-b border-white/5 bg-white/[0.03] text-[10px] uppercase tracking-[1px] text-white/40">
                         <tr>
                           <th className="px-6 py-4">User</th>
@@ -275,6 +275,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
               {activeTab === 'content' && (
                 <div className="space-y-8">
+                  <div className="rounded-xl border border-gold/20 bg-gold/5 p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h4 className="text-sm font-bold uppercase tracking-[1px] text-gold">Visual Assets</h4>
+                      <button 
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('generate-all-images'));
+                          alert('Batch generation started. This may take a few minutes.');
+                        }}
+                        className="flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] text-black hover:bg-yellow transition-all"
+                      >
+                        <Zap className="h-3 w-3" />
+                        Generate All Visuals (Pro)
+                      </button>
+                    </div>
+                    <p className="mb-4 text-[11px] leading-relaxed text-white/40">
+                      Trigger a batch generation of all chapter visuals using the Gemini 3 Pro model. This ensures all readers see high-fidelity cinematic imagery.
+                    </p>
+                  </div>
+
                   <div className="rounded-xl border border-gold/20 bg-gold/5 p-6">
                     <h4 className="mb-4 text-sm font-bold uppercase tracking-[1px] text-gold">Add New Drop</h4>
                     <form onSubmit={handleAddContent} className="grid grid-cols-1 gap-4 md:grid-cols-2">

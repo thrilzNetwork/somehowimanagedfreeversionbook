@@ -29,14 +29,23 @@ import {
   Zap,
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { STATIC_CHAPTER_IMAGES } from "./chapterAssets";
 import { EntryGate } from './components/EntryGate';
-import { auth, getUserProfile } from './firebase';
+import { auth, getUserProfile, getChapterVisuals, saveChapterVisual } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FocusAudio } from './components/FocusAudio';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserDashboard } from './components/UserDashboard';
+
+declare global {
+  interface Window {
+    aistudio: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
 
 const BASE_URL = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
 const BOOK_URL = BASE_URL;
@@ -72,7 +81,6 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-gold" />
-              <span className="font-mono text-[10px] tracking-[2px] uppercase text-gold/60">Developing visual...</span>
             </div>
           </div>
         )}
@@ -145,7 +153,6 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-gold/20 italic font-serif px-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin opacity-20" />
-            <p className="text-sm">Developing cinematic visual...</p>
           </div>
         )}
       </motion.div>
@@ -180,8 +187,26 @@ export default function App() {
   }, []);
 
   const [isAccessGranted, setIsAccessGranted] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const checkApiKey = async () => {
+      if (window.aistudio) {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(selected);
+      }
+    };
+    checkApiKey();
+  }, []);
+
+  const handleOpenSelectKey = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setHasApiKey(true);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -299,28 +324,71 @@ export default function App() {
   };
 
   const generateChapterImage = async (prompt: string, chapterId: string, retryCount = 0): Promise<boolean> => {
-    if (!ai || chapterImages[chapterId]) return true;
+    // Ensure we have an API key for the Pro model
+    if (!hasApiKey) {
+      console.warn("API Key required for Pro model generation");
+      return false;
+    }
+
+    // Use the Pro model as requested
+    const modelName = 'gemini-3-pro-image-preview';
+    
+    // Create a fresh instance to ensure the latest API key is used
+    const currentAi = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     
     setGeneratingImageId(chapterId);
     setErrorIds(prev => ({ ...prev, [chapterId]: false }));
     
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+      const response = await currentAi.models.generateContent({
+        model: modelName,
         contents: {
           parts: [{ text: `Cinematic, high-end professional photography, realistic, shallow depth of field, warm lighting, sophisticated, moody, high-quality, deep blacks and gold accents. Subject: ${prompt}. No frame, full bleed image.` }],
         },
         config: {
           imageConfig: {
             aspectRatio: "16:9",
+            imageSize: "1K"
           },
         },
       });
 
       for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) {
-          const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          setChapterImages(prev => ({ ...prev, [chapterId]: imageUrl }));
+          const originalImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          
+          // Compress image to avoid Firestore 1MB limit
+          const compressedImageUrl = await new Promise<string>((resolve) => {
+            const img = new Image();
+            img.src = originalImageUrl;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const maxWidth = 800; // Downscale to 800px width
+
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                // Convert to JPEG with 0.7 quality to significantly reduce size
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+              } else {
+                resolve(originalImageUrl);
+              }
+            };
+            img.onerror = () => resolve(originalImageUrl);
+          });
+
+          setChapterImages(prev => ({ ...prev, [chapterId]: compressedImageUrl }));
+          // Save to Firestore for persistence
+          await saveChapterVisual(chapterId, compressedImageUrl, prompt);
           return true;
         }
       }
@@ -329,11 +397,15 @@ export default function App() {
       console.error("Image Generation Error:", error);
       
       const isQuotaError = error?.message?.includes('429') || error?.message?.includes('quota');
+      const isKeyError = error?.message?.includes('Requested entity was not found');
+
+      if (isKeyError) {
+        setHasApiKey(false);
+        return false;
+      }
       
       if (isQuotaError && retryCount < 2) {
-        // Exponential backoff: 5s, 10s
         const delay = (retryCount + 1) * 5000;
-        console.log(`Retrying image generation for ${chapterId} in ${delay}ms...`);
         await new Promise(r => setTimeout(r, delay));
         return generateChapterImage(prompt, chapterId, retryCount + 1);
       }
@@ -347,6 +419,33 @@ export default function App() {
       setGeneratingImageId(null);
     }
   };
+
+  const generateAllImages = async () => {
+    if (!hasApiKey) {
+      await handleOpenSelectKey();
+    }
+    
+    // Clear existing images to ensure we see the new Pro versions
+    setChapterImages({});
+    
+    for (const chapter of CHAPTERS) {
+      await generateChapterImage(chapter.prompt, chapter.id);
+      // Small delay between generations to respect rate limits
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  };
+
+  useEffect(() => {
+    if (isAccessGranted && hasApiKey) {
+      generateAllImages();
+    }
+  }, [isAccessGranted, hasApiKey]);
+
+  useEffect(() => {
+    const handleGenerateAll = () => generateAllImages();
+    window.addEventListener('generate-all-images', handleGenerateAll);
+    return () => window.removeEventListener('generate-all-images', handleGenerateAll);
+  }, [hasApiKey, chapterImages]);
 
   const generateExplanation = async (chapterId: string, title: string) => {
     if (!ai || explanations[chapterId]) return;
@@ -378,7 +477,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
-      <EntryGate onAccessGranted={() => setIsAccessGranted(true)} />
+      <EntryGate 
+        onAccessGranted={() => setIsAccessGranted(true)} 
+        hasApiKey={hasApiKey}
+        onSelectKey={handleOpenSelectKey}
+      />
       
       <AnimatePresence>
         {isAccessGranted && (
@@ -395,7 +498,7 @@ export default function App() {
       <div className="mx-auto max-w-[820px] bg-black">
         
         {/* Cover Section */}
-        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] px-8 py-20 text-center md:px-16">
+        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] px-6 py-20 text-center md:px-16">
           <div className="absolute top-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
           <div className="absolute bottom-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
           
@@ -415,7 +518,7 @@ export default function App() {
             
             <h1 className="font-serif leading-none">
               <span className="mb-2 block text-sm italic tracking-[2px] text-gold md:text-xl">Somehow</span>
-              <span className="block font-black text-[44px] leading-[49px] tracking-normal">I&nbsp;&nbsp;MANAGED</span>
+              <span className="block font-black text-4xl md:text-[44px] leading-tight md:leading-[49px] tracking-normal">I&nbsp;&nbsp;MANAGED</span>
             </h1>
             
             <div className="my-10 h-[1px] w-8 bg-gold opacity-60" />
@@ -431,7 +534,7 @@ export default function App() {
         </section>
 
         {/* Dedication Section */}
-        <section className="flex flex-col items-center justify-center border-b border-white/10 px-8 py-24 text-center md:px-20 md:py-32">
+        <section className="flex flex-col items-center justify-center border-b border-white/10 px-6 py-16 text-center md:px-20 md:py-20">
           <motion.span 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 0.5 }}
@@ -461,7 +564,7 @@ export default function App() {
         </section>
 
         {/* TOC Section */}
-        <section id="toc" className="flex flex-col justify-center border-b border-white/10 px-6 py-20 md:px-20 md:py-32">
+        <section id="toc" className="flex flex-col justify-center border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
           <span className="mb-8 block font-mono text-[10px] tracking-[4px] uppercase text-gold md:mb-12 md:text-xs md:tracking-[5px]">Contents</span>
           <div className="space-y-0">
             {[
@@ -493,7 +596,7 @@ export default function App() {
         </section>
 
         {/* Chapter 00 */}
-        <section id="ch0" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch0" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">00 · Foreword</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -533,7 +636,7 @@ export default function App() {
               This is a manual. For the front desk agent who wants to understand why decisions above them get made the way they do. For the housekeeping supervisor who runs the most operationally complex department in the building and rarely gets acknowledged for it. For the GM who has been doing this fifteen years and still sometimes feels like they are improvising. For the F&B manager who knows something is wrong with the numbers but cannot name it precisely. For the new hire on week two still trying to understand what a hotel actually is.
             </p>
             
-            <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-11 py-9">
+            <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-6 py-8 md:px-11 md:py-9">
               <Quote className="absolute top-6 left-6 h-20 w-20 text-gold opacity-10" />
               <p className="relative z-10 font-serif text-xl italic leading-relaxed text-white">
                 "I didn't write this because I figured it all out. I wrote it because I'm still in it, still learning, still making mistakes — and I got tired of pretending otherwise."
@@ -550,7 +653,7 @@ export default function App() {
               I was born in South America and moved to the United States in 2009. After high school I enrolled in aviation academy. Before that, it had been soccer — my entire life built around the game. And then one day on a field, I waited for the feeling to return and it did not. I was ready for something else, though I did not know what yet.
             </p>
             
-            <div className="my-10 border-l-[3px] border-gold bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-gold bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-gold">The Beginning — Hampton Brand, 2009</span>
               <p className="font-serif text-base italic leading-relaxed text-white/65">
                 My GM, Justin, was the person who gave me the real opportunity — alongside my brother, he is one of the people most responsible for who I became. I worked houseman from 9 to 3 and security from 5 to 3. Security meant a flashlight and a radio. That was it. And somehow, from the very first week, I loved it. I loved the structure of the hotel. Its rhythm. The way the building shifted energy at different hours. I did not know I was falling in love with an industry. I just knew I wanted to understand everything about how this place worked.
@@ -564,7 +667,7 @@ export default function App() {
         </section>
 
         {/* Chapter 01 */}
-        <section id="ch1" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch1" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">01 · Day Zero</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -598,7 +701,7 @@ export default function App() {
               Opening day feels like this. You have been building toward it for months. You have made hundreds of decisions under pressure with information you wished you had but did not. Your team is a mix of people who are ready and people who are not — you know the difference, but you need all of them today because there is no one else. The building is ninety-something percent finished. The flag goes up whether the punch list is complete or not.
             </p>
             
-            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 01</span>
               <h4 className="mb-3 font-serif text-xl font-bold text-white">The building is the easy part. Culture is not.</h4>
               <p className="text-sm leading-relaxed text-white/80">
@@ -621,7 +724,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="my-10 border border-white/10 bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-5 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Pre-Opening Checklist</span>
               <div className="space-y-2">
                 {[
@@ -642,7 +745,7 @@ export default function App() {
         </section>
 
         {/* Chapter 02 */}
-        <section id="ch2" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch2" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">02 · The Turnaround</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -703,7 +806,7 @@ export default function App() {
               The visible problems were symptoms. The actual cause was something quieter and deeper, embedded in how the team related to each other, in what had silently become normal. Activity looks like leadership. They have the same energy signature. But leadership without diagnosis is confident improvisation — and in a distressed property, that can reinforce the exact dynamics that created the crisis.
             </p>
 
-            <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-11 py-9">
+            <div className="relative my-10 overflow-hidden border border-white/10 bg-[#0d0d0d] px-6 py-8 md:px-11 md:py-9">
               <Quote className="absolute top-6 left-6 h-20 w-20 text-gold opacity-10" />
               <p className="relative z-10 font-serif text-xl italic leading-relaxed text-white">
                 "The person who knows the most about what's wrong with your hotel has been there three years and nobody has asked them yet. Go find that person on day one."
@@ -716,7 +819,7 @@ export default function App() {
         </section>
 
         {/* Chapter 03 */}
-        <section id="ch3" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch3" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">03 · The Money People</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -800,7 +903,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 03</span>
               <h4 className="mb-3 font-serif text-xl font-bold text-white">A P&L is a story. Tell it before they read it.</h4>
               <p className="text-sm leading-relaxed text-white/80">
@@ -811,7 +914,7 @@ export default function App() {
         </section>
 
         {/* Chapter 04 */}
-        <section id="ch4" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch4" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">04 · People First</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -877,7 +980,7 @@ export default function App() {
               Retention is not about paying the most. It's about being the place where people feel like they belong. I learned this from my brother, Juan Carlos. He didn't just manage people; he cared for them. He knew their kids' names, their struggles, their ambitions. He loved the people before he loved the business. And because of that, the business loved him back.
             </p>
 
-            <div className="my-10 border-l-[3px] border-yellow bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-yellow bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Lesson 04</span>
               <h4 className="mb-3 font-serif text-xl font-bold text-white">Hire for attitude, train for skill.</h4>
               <p className="text-sm leading-relaxed text-white/80">
@@ -888,7 +991,7 @@ export default function App() {
         </section>
 
         {/* Chapter 05 */}
-        <section id="ch5" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch5" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">05 · F&B Strategy</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -944,7 +1047,7 @@ export default function App() {
               Revenue strategy in F&B isn't just about menu prices. It's about capturing the "captive audience." Your guests are already in the building. Why are they ordering Uber Eats? If they are, you've failed to provide value, convenience, or quality. Fix that, and you fix your F&B P&L.
             </p>
 
-            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 05</span>
               <h4 className="mb-3 font-serif text-xl font-bold text-white">Measure what matters.</h4>
               <p className="text-sm leading-relaxed text-white/80">
@@ -955,7 +1058,7 @@ export default function App() {
         </section>
 
         {/* Chapter 06 */}
-        <section id="ch6" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch6" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">06 · Modernization</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1011,7 +1114,7 @@ export default function App() {
               The goal of technology in a hotel isn't to replace the front desk agent. It's to free them from the screen. If the AI handles the repetitive tasks — the check-in paperwork, the basic FAQs, the data entry — the agent can actually look the guest in the eye and have a conversation. That is where hospitality happens.
             </p>
 
-            <div className="my-10 border-l-[3px] border-yellow bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-yellow bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Lesson 06</span>
               <h4 className="mb-3 font-serif text-xl font-bold text-white">Don't be afraid of the "Black Box."</h4>
               <p className="text-sm leading-relaxed text-white/80">
@@ -1022,7 +1125,7 @@ export default function App() {
         </section>
 
         {/* Chapter 07 */}
-        <section id="ch7" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch7" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">07 · Resilience</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1081,7 +1184,7 @@ export default function App() {
               I took a step back. I focused on my family. I realized that the hotel would still be there, but my kids wouldn't be young forever. This wasn't a retreat; it was a recalibration. I came back stronger, more focused, and with a new mission: to build tools that make this industry more sustainable for everyone in it.
             </p>
 
-            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-6 py-6 md:px-8 md:py-7">
               <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 07</span>
               <h4 className="mb-3 font-serif text-xl font-bold text-white">Protect your peace.</h4>
               <p className="text-sm leading-relaxed text-white/80">
@@ -1092,7 +1195,7 @@ export default function App() {
         </section>
 
         {/* Chapter 08 */}
-        <section id="ch8" className="border-b border-white/10 px-6 py-12 md:px-20 md:py-16">
+        <section id="ch8" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">08 · Closing Notes</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1130,7 +1233,7 @@ export default function App() {
               The title of this book, "Somehow I&nbsp;&nbsp;MANAGED," is a bit of a joke. Because the truth is, we never just "somehow" manage. We manage with intention. We manage with heart. We manage with a relentless focus on the people who make the building work.
             </p>
 
-            <div className="my-10 border border-white/10 bg-[#0d0d0d] px-11 py-9 text-center">
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] px-6 py-8 md:px-11 md:py-9 text-center">
               <Quote className="mx-auto mb-6 h-12 w-12 text-gold opacity-20" />
               <p className="font-serif text-2xl italic leading-relaxed text-white">
                 "The building is just the stage. The people are the performance. Your job is to make sure the lights never go out on them."
@@ -1149,7 +1252,7 @@ export default function App() {
         </section>
 
         {/* About Section */}
-        <section id="about" className="px-6 py-16 md:px-20 md:py-20">
+        <section id="about" className="px-6 py-12 md:px-20 md:py-16">
           <span className="mb-8 block font-mono text-[10px] tracking-[5px] uppercase text-gold md:mb-12 md:text-xs">About the Author</span>
           <div className="mt-8">
             <div className="text-center md:text-left">
@@ -1195,7 +1298,7 @@ export default function App() {
         </section>
 
         {/* Closing Section */}
-        <section className="flex flex-col items-center justify-center px-6 py-20 text-center md:px-20 md:py-32">
+        <section className="flex flex-col items-center justify-center px-6 py-16 text-center md:px-20 md:py-20">
           <Key className="mb-6 h-6 w-6 text-gold opacity-60 md:mb-9 md:h-8 md:w-8" />
           <h2 className="mb-4 font-serif text-2xl font-black text-white md:text-4xl">Quantum Hospitality Solutions</h2>
           <p className="mb-6 max-w-[440px] text-xs leading-relaxed text-white/45 md:mb-4 md:text-sm">
@@ -1210,7 +1313,7 @@ export default function App() {
         </section>
 
         {/* Share Section */}
-        <section className="border-t border-white/10 bg-[#050505] px-6 py-16 text-center md:px-20 md:py-20">
+        <section className="border-t border-white/10 bg-[#050505] px-6 py-12 text-center md:px-20 md:py-16">
           <span className="mb-5 block font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">Spread the Word</span>
           <h2 className="mb-3 font-serif text-2xl font-black text-white md:text-3xl">Unlock Gifts & Prizes</h2>
           <p className="mx-auto mb-8 max-w-[440px] text-xs leading-relaxed text-white/45 md:mb-9 md:text-sm">

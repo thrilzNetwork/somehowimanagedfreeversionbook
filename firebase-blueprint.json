@@ -56,12 +56,25 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userUid", "userName", "userEmail", "message", "status", "createdAt"]
+    },
+    "ChapterVisual": {
+      "title": "ChapterVisual",
+      "description": "A generated visual for a book chapter.",
+      "type": "object",
+      "properties": {
+        "chapterId": { "type": "string" },
+        "imageUrl": { "type": "string", "description": "Base64 or URL of the generated image." },
+        "prompt": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chapterId", "imageUrl", "prompt", "updatedAt"]
     }
   },
   "firestore": {
     "entries/{entryId}": { "schema": "Entry", "description": "Legacy entries." },
     "users/{userId}": { "schema": "User", "description": "Community member profiles." },
     "content/{contentId}": { "schema": "Content", "description": "Community content and drops." },
-    "consultations/{consultationId}": { "schema": "Consultation", "description": "Consultation requests." }
+    "consultations/{consultationId}": { "schema": "Consultation", "description": "Consultation requests." },
+    "chapter_visuals/{visualId}": { "schema": "ChapterVisual", "description": "Persistent chapter visuals." }
   }
 }

@@ -211,3 +211,33 @@ export const getEntries = async () => {
     return [];
   }
 };
+
+export const saveChapterVisual = async (chapterId: string, imageUrl: string, prompt: string) => {
+  const path = `chapter_visuals/${chapterId}`;
+  try {
+    await setDoc(doc(db, 'chapter_visuals', chapterId), {
+      chapterId,
+      imageUrl,
+      prompt,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const getChapterVisuals = async () => {
+  const path = 'chapter_visuals';
+  try {
+    const snapshot = await getDocs(collection(db, path));
+    const visuals: Record<string, string> = {};
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      visuals[data.chapterId] = data.imageUrl;
+    });
+    return visuals;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return {};
+  }
+};
