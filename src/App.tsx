@@ -18,7 +18,9 @@ import {
   Image as ImageIcon,
   Sparkles,
   Loader2,
-  Settings
+  Settings,
+  ArrowUp,
+  Menu,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { GoogleGenAI, Modality } from "@google/genai";
@@ -30,13 +32,12 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string, isGenerating: boolean }) => {
   return (
-    <div className="relative mb-12">
+    <div className="relative mb-8 md:mb-12">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative overflow-hidden rounded-lg border-[12px] border-[#1a1a1a] shadow-2xl bg-[#050505]"
+        className="relative overflow-hidden rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-[#050505]"
         style={{ 
-          boxShadow: 'inset 0 0 100px rgba(0,0,0,0.8), 0 20px 50px rgba(0,0,0,0.9)',
           aspectRatio: '16/9'
         }}
       >
@@ -54,31 +55,43 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
             {/* Glass Reflection Overlay */}
             <motion.div 
               animate={{ 
-                opacity: [0.1, 0.2, 0.1],
-                x: [-10, 10, -10],
+                opacity: [0.05, 0.15, 0.05],
+                x: [-20, 20, -20],
                 y: [-10, 10, -10]
               }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
               className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-transparent mix-blend-overlay" 
             />
             
+            {/* Magical Shimmer Effect */}
+            <motion.div 
+              animate={{ 
+                x: ['-100%', '200%'],
+                opacity: [0, 0.3, 0]
+              }}
+              transition={{ duration: 5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
+              className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-transparent via-gold/10 to-transparent skew-x-12" 
+            />
+
             {/* Dust/Grain Overlay */}
-            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] mix-blend-screen" />
+            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] mix-blend-screen" />
 
             <motion.img 
               src={src} 
               alt={alt} 
-              className="w-full h-full object-cover sepia-[0.2] brightness-[0.85] contrast-[1.1]"
+              className="w-full h-full object-cover sepia-[0.15] brightness-[0.9] contrast-[1.05]"
               animate={{
-                scale: [1, 1.01, 1],
+                scale: [1, 1.02, 1],
                 filter: [
-                  'sepia(0.2) brightness(0.85) contrast(1.1)',
-                  'sepia(0.25) brightness(0.9) contrast(1.15)',
-                  'sepia(0.2) brightness(0.85) contrast(1.1)'
-                ]
+                  'sepia(0.15) brightness(0.9) contrast(1.05)',
+                  'sepia(0.2) brightness(0.95) contrast(1.1)',
+                  'sepia(0.15) brightness(0.9) contrast(1.05)'
+                ],
+                x: [-1, 1, -1],
+                y: [-1, 1, -1]
               }}
               transition={{
-                duration: 12,
+                duration: 15,
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
@@ -92,12 +105,6 @@ const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string,
           </div>
         )}
       </motion.div>
-      
-      {/* Antique Frame Corners */}
-      <div className="absolute -top-2 -left-2 h-8 w-8 border-t-2 border-l-2 border-gold/40 rounded-tl-sm pointer-events-none" />
-      <div className="absolute -top-2 -right-2 h-8 w-8 border-t-2 border-r-2 border-gold/40 rounded-tr-sm pointer-events-none" />
-      <div className="absolute -bottom-2 -left-2 h-8 w-8 border-b-2 border-l-2 border-gold/40 rounded-bl-sm pointer-events-none" />
-      <div className="absolute -bottom-2 -right-2 h-8 w-8 border-b-2 border-r-2 border-gold/40 rounded-br-sm pointer-events-none" />
     </div>
   );
 };
@@ -215,7 +222,7 @@ export default function App() {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A magical Harry Potter style living portrait. Theme: ${prompt}. The subject should appear as if they are subtly moving or breathing. Style: Cinematic, moody lighting, dark background, antique gold frame, high-end editorial, deep blacks and gold accents.` }],
+          parts: [{ text: `A magical Harry Potter style living portrait. Theme: ${prompt}. The subject should appear as if they are subtly moving or breathing. Style: Cinematic, moody lighting, dark background, high-end editorial, deep blacks and gold accents. No frame, full bleed image.` }],
         },
         config: {
           imageConfig: {
@@ -271,8 +278,8 @@ export default function App() {
             </div>
             
             <h1 className="font-serif leading-none">
-              <span className="mb-2 block text-base italic tracking-[2px] text-gold md:text-xl">Somehow</span>
-              <span className="block text-7xl font-black tracking-[-5px] md:text-9xl">Managed</span>
+              <span className="mb-2 block text-sm italic tracking-[2px] text-gold md:text-xl">Somehow</span>
+              <span className="block text-5xl font-black tracking-[-3px] md:text-9xl md:tracking-[-5px]">Managed</span>
             </h1>
             
             <div className="my-10 h-[1px] w-8 bg-gold opacity-60" />
@@ -345,45 +352,46 @@ export default function App() {
         </section>
 
         {/* TOC Section */}
-        <section id="toc" className="flex min-h-screen flex-col justify-center border-b border-white/10 px-8 py-20 md:px-20">
-          <span className="mb-12 block font-mono text-xs tracking-[5px] uppercase text-gold">Contents</span>
+        <section id="toc" className="flex min-h-screen flex-col justify-center border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <span className="mb-8 block font-mono text-[10px] tracking-[4px] uppercase text-gold md:mb-12 md:text-xs md:tracking-[5px]">Contents</span>
           <div className="space-y-0">
             {[
-              { num: "00", title: "Foreword — The Houseman Who Fell in Love", sub: "How I got here, and who this is really for", id: "ch0" },
-              { num: "01", title: "Day Zero — Opening a Hotel From Scratch", sub: "The opening, culture before team, and what actually matters", id: "ch1" },
-              { num: "02", title: "The Turnaround — Walking Into a Broken Property", sub: "Diagnose before you act. Order matters more than speed.", id: "ch2" },
-              { num: "03", title: "The Money People — Ownership & Investors", sub: "The relationship that defines everything else", id: "ch3" },
-              { num: "04", title: "Your Team Is Everything", sub: "Real culture, real retention, and hard conversations", id: "ch4" },
-              { num: "05", title: "F&B Is Not an Amenity", sub: "Revenue strategy and the outlet nobody takes seriously enough", id: "ch5" },
-              { num: "06", title: "The Last Industry to Modernize", sub: "Technology, systems, and why the gap is your advantage", id: "ch6" },
-              { num: "07", title: "Running on Empty", sub: "COVID, family, career gaps, and how I kept going", id: "ch7" },
-              { num: "08", title: "Closing Notes — What I Know Now", sub: "The words I needed to hear when nobody was saying them", id: "ch8" },
+              { num: "00", title: "Foreword", sub: "The Houseman Who Fell in Love", id: "ch0" },
+              { num: "01", title: "Day Zero", sub: "Opening a Hotel From Scratch", id: "ch1" },
+              { num: "02", title: "The Turnaround", sub: "Walking Into a Broken Property", id: "ch2" },
+              { num: "03", title: "The Money People", sub: "Ownership & Investors", id: "ch3" },
+              { num: "04", title: "Your Team Is Everything", sub: "Real culture, real retention", id: "ch4" },
+              { num: "05", title: "F&B Is Not an Amenity", sub: "Revenue strategy", id: "ch5" },
+              { num: "06", title: "Modernization", sub: "The Last Industry to Modernize", id: "ch6" },
+              { num: "07", title: "Running on Empty", sub: "COVID, family, resilience", id: "ch7" },
+              { num: "08", title: "Closing Notes", sub: "What I Know Now", id: "ch8" },
               { num: "—", title: "About the Author", sub: "", id: "about" },
             ].map((item, i) => (
               <a 
                 key={i} 
                 href={`#${item.id}`}
-                className="group flex items-start gap-6 border-b border-white/10 py-4 transition-colors hover:bg-white/5"
+                className="group flex items-center gap-4 border-b border-white/10 py-5 transition-colors hover:bg-white/5 active:bg-white/10 md:gap-6 md:py-4"
               >
-                <span className="min-w-[28px] pt-1 font-mono text-[10px] text-white/20 group-hover:text-gold">{item.num}</span>
-                <div>
-                  <div className="text-base font-semibold text-white group-hover:text-gold">{item.title}</div>
-                  {item.sub && <div className="text-sm italic text-white/45">{item.sub}</div>}
+                <span className="min-w-[24px] font-mono text-[9px] text-white/20 group-hover:text-gold md:min-w-[28px] md:pt-1 md:text-[10px]">{item.num}</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-white group-hover:text-gold md:text-base">{item.title}</div>
+                  {item.sub && <div className="text-xs italic text-white/45 md:text-sm">{item.sub}</div>}
                 </div>
+                <ArrowRight className="h-4 w-4 text-white/10 transition-transform group-hover:translate-x-1 group-hover:text-gold md:h-5 md:w-5" />
               </a>
             ))}
           </div>
         </section>
 
         {/* Chapter 00 */}
-        <section id="ch0" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">00 · Foreword</span>
-            <div className="flex items-center gap-4">
+        <section id="ch0" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">00 · Foreword</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -393,14 +401,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("The Houseman Who Fell in Love. Before anything else, let me be clear about what this book is and what it is not.", "ch0")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A young man cleaning a luxury hotel lobby at night, cinematic lighting", "ch0")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch0' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -408,8 +416,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">The Houseman Who Fell in Love</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">The Houseman Who Fell in Love</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "I showed up thinking I was going to work in an office. I was. It just needed to be cleaned first."
           </span>
           
@@ -461,14 +469,14 @@ export default function App() {
         </section>
 
         {/* Chapter 01 */}
-        <section id="ch1" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">01 · Day Zero</span>
-            <div className="flex items-center gap-4">
+        <section id="ch1" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">01 · Day Zero</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -478,14 +486,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("Opening a Hotel From Scratch. You will never feel ready. Open anyway.", "ch1")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A grand hotel opening ceremony, red ribbon, architectural beauty", "ch1")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch1' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -493,8 +501,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Opening a Hotel From Scratch</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Opening a Hotel From Scratch</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "You will never feel ready. Open anyway. The hotel will finish building itself around you."
           </span>
 
@@ -553,14 +561,14 @@ export default function App() {
         </section>
 
         {/* Chapter 02 */}
-        <section id="ch2" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">02 · The Turnaround</span>
-            <div className="flex items-center gap-4">
+        <section id="ch2" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">02 · The Turnaround</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -570,14 +578,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("Walking Into a Broken Property. Don't fix what you see first. Understand what broke it.", "ch2")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
-                onClick={() => generateChapterImage("A dark, empty hotel corridor with a single flickering light, cinematic", "ch2")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                onClick={() => generateChapterImage("A dark, empty hotel hotel corridor with a single flickering light, cinematic", "ch2")}
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch2' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -585,8 +593,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Walking Into a Broken Property</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Walking Into a Broken Property</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Don't fix what you see first. Understand what broke it."
           </span>
 
@@ -641,14 +649,14 @@ export default function App() {
         </section>
 
         {/* Chapter 03 */}
-        <section id="ch3" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">03 · The Money People</span>
-            <div className="flex items-center gap-4">
+        <section id="ch3" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">03 · The Money People</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -658,14 +666,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("Managing Ownership and Investors. They own the building. You run the building.", "ch3")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A high-end boardroom meeting with city views, luxury aesthetic", "ch3")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch3' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -673,8 +681,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Managing Ownership & Investors</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Managing Ownership & Investors</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "They own the building. You run the building. These are not the same job."
           </span>
 
@@ -734,14 +742,14 @@ export default function App() {
         </section>
 
         {/* Chapter 04 */}
-        <section id="ch4" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">04 · People First</span>
-            <div className="flex items-center gap-4">
+        <section id="ch4" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">04 · People First</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -751,14 +759,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("Your Team Is Everything. Real culture is what happens when you aren't in the room.", "ch4")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A diverse hotel team standing together in a modern lobby, warm lighting", "ch4")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch4' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -766,8 +774,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Your Team Is Everything</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Your Team Is Everything</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Real culture is not a ping-pong table or a pizza party. It's what happens when you aren't in the room."
           </span>
 
@@ -825,14 +833,14 @@ export default function App() {
         </section>
 
         {/* Chapter 05 */}
-        <section id="ch5" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">05 · F&B Strategy</span>
-            <div className="flex items-center gap-4">
+        <section id="ch5" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">05 · F&B Strategy</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -842,14 +850,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("F&B Is Not an Amenity. Stop treating your restaurant like a loss leader.", "ch5")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A beautifully plated dish in a dimly lit, high-end hotel restaurant", "ch5")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch5' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -857,8 +865,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">F&B Is Not an Amenity</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">F&B Is Not an Amenity</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Stop treating your restaurant like a loss leader. It's a profit center that happens to serve food."
           </span>
 
@@ -906,14 +914,14 @@ export default function App() {
         </section>
 
         {/* Chapter 06 */}
-        <section id="ch6" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">06 · Modernization</span>
-            <div className="flex items-center gap-4">
+        <section id="ch6" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">06 · Modernization</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -923,14 +931,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("The Last Industry to Modernize. Technology is not your enemy. It's your leverage.", "ch6")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A futuristic hotel lobby with subtle holographic displays and warm wood accents", "ch6")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch6' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -938,8 +946,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">The Last Industry to Modernize</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">The Last Industry to Modernize</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Technology is not your enemy. It's your leverage. Use it to be more human, not less."
           </span>
 
@@ -987,14 +995,14 @@ export default function App() {
         </section>
 
         {/* Chapter 07 */}
-        <section id="ch7" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">07 · Resilience</span>
-            <div className="flex items-center gap-4">
+        <section id="ch7" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">07 · Resilience</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -1004,14 +1012,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("Running on Empty. Burnout is real. Your family is more real.", "ch7")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A quiet, rainy night view from a hotel window, reflective and moody", "ch7")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch7' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -1019,8 +1027,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Running on Empty</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Running on Empty</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Burnout is not a badge of honor. It's a failure of sustainability."
           </span>
 
@@ -1071,14 +1079,14 @@ export default function App() {
         </section>
 
         {/* Chapter 08 */}
-        <section id="ch8" className="border-b border-white/10 px-8 py-20 md:px-20">
-          <div className="mb-12 flex items-center justify-between">
-            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">08 · Closing Notes</span>
-            <div className="flex items-center gap-4">
+        <section id="ch8" className="border-b border-white/10 px-6 py-16 md:px-20 md:py-20">
+          <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
+            <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">08 · Closing Notes</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <select 
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value as any)}
-                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+                className="rounded border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30 md:py-1"
               >
                 <option value="Fenrir">Fenrir</option>
                 <option value="Kore">Kore</option>
@@ -1088,14 +1096,14 @@ export default function App() {
               </select>
               <button 
                 onClick={() => generateNarration("What I Know Now. You are not just managing a building. You are managing a legacy.", "ch8")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                 Listen
               </button>
               <button 
                 onClick={() => generateChapterImage("A sunrise over a beautiful hotel skyline, hopeful and bright", "ch8")}
-                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+                className="flex items-center gap-2 rounded-full border border-gold/10 bg-gold/5 px-3 py-1.5 font-mono text-[8px] tracking-[2px] uppercase text-gold/60 hover:text-gold md:border-none md:bg-transparent md:p-0 md:text-[9px]"
               >
                 {generatingImageId === 'ch8' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Visualize
@@ -1103,8 +1111,8 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">What I Know Now</h2>
-          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">What I Know Now</h2>
+          <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "You are not just managing a building. You are managing a legacy. Make it one worth leaving."
           </span>
 
@@ -1148,19 +1156,19 @@ export default function App() {
 
 
         {/* About Section */}
-        <section id="about" className="px-8 py-20 md:px-20">
-          <span className="mb-12 block font-mono text-xs tracking-[5px] uppercase text-gold">About the Author</span>
-          <div className="mt-12 grid grid-cols-1 gap-11 md:grid-cols-[170px_1fr]">
+        <section id="about" className="px-6 py-16 md:px-20 md:py-20">
+          <span className="mb-8 block font-mono text-[10px] tracking-[5px] uppercase text-gold md:mb-12 md:text-xs">About the Author</span>
+          <div className="mt-8 grid grid-cols-1 gap-8 md:mt-12 md:grid-cols-[170px_1fr] md:gap-11">
             <div className="flex flex-col items-center md:items-start">
               <div className="relative flex h-[210px] w-[170px] items-center justify-center bg-[#111] text-4xl font-black text-gold/20 before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-full before:bg-gold">
                 AS
               </div>
               <div className="mt-2 font-mono text-[9px] tracking-[2px] uppercase text-white/20">Alejandro Soria</div>
             </div>
-            <div>
-              <h2 className="mb-1 font-serif text-3xl font-black tracking-tight text-white">Alejandro Soria</h2>
+            <div className="text-center md:text-left">
+              <h2 className="mb-1 font-serif text-3xl font-black tracking-tight text-white md:text-4xl">Alejandro Soria</h2>
               <span className="mb-6 block font-mono text-[10px] tracking-[2px] uppercase text-gold">Operator · Founder · 10+ Years in the Building</span>
-              <div className="space-y-4 text-base leading-relaxed text-white/80">
+              <div className="space-y-4 text-sm leading-relaxed text-white/80 md:text-base">
                 <p>
                   Alejandro Soria was born in South America and moved to the United States in 2009. He began his career as a houseman and spent the next decade building operational expertise from the ground up: night auditor, front office manager, assistant general manager, and general manager across limited, select, and full-service hotels spanning multiple national brands.
                 </p>
@@ -1169,27 +1177,27 @@ export default function App() {
                 </p>
               </div>
               
-              <div className="mt-7 flex flex-wrap gap-7 border-t border-white/10 pt-6">
+              <div className="mt-7 flex flex-wrap justify-center gap-6 border-t border-white/10 pt-6 md:justify-start md:gap-7">
                 <div>
-                  <span className="block font-serif text-3xl font-black leading-none text-gold">10+</span>
-                  <div className="mt-1 text-[11px] text-white/20">Years in operations</div>
+                  <span className="block font-serif text-2xl font-black leading-none text-gold md:text-3xl">10+</span>
+                  <div className="mt-1 text-[10px] text-white/20 md:text-[11px]">Years in operations</div>
                 </div>
                 <div>
-                  <span className="block font-serif text-3xl font-black leading-none text-gold">6+</span>
-                  <div className="mt-1 text-[11px] text-white/20">Tools built & live</div>
+                  <span className="block font-serif text-2xl font-black leading-none text-gold md:text-3xl">6+</span>
+                  <div className="mt-1 text-[10px] text-white/20 md:text-[11px]">Tools built & live</div>
                 </div>
                 <div>
-                  <span className="block font-serif text-3xl font-black leading-none text-gold">3</span>
-                  <div className="mt-1 text-[11px] text-white/20">Property tiers managed</div>
+                  <span className="block font-serif text-2xl font-black leading-none text-gold md:text-3xl">3</span>
+                  <div className="mt-1 text-[10px] text-white/20 md:text-[11px]">Property tiers managed</div>
                 </div>
               </div>
               
-              <div className="mt-6">
+              <div className="mt-8 md:mt-6">
                 <a 
                   href="https://www.linkedin.com/in/alejandro-soria-3a849915a" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 border border-gold px-4 py-2 font-mono text-xs tracking-wider text-gold transition-colors hover:bg-gold hover:text-black"
+                  className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 font-mono text-xs tracking-wider text-gold transition-colors hover:bg-gold hover:text-black md:rounded-none md:px-4 md:py-2"
                 >
                   <Linkedin className="h-3 w-3" />
                   LinkedIn
@@ -1200,34 +1208,34 @@ export default function App() {
         </section>
 
         {/* Closing Section */}
-        <section className="flex min-h-screen flex-col items-center justify-center px-8 py-20 text-center md:px-20">
-          <Key className="mb-9 h-8 w-8 text-gold opacity-60" />
-          <h2 className="mb-4 font-serif text-3xl font-black text-white md:text-4xl">Quantum Hospitality Solutions</h2>
-          <p className="mb-4 max-w-[440px] text-sm leading-relaxed text-white/45">
+        <section className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-16 text-center md:px-20 md:py-20">
+          <Key className="mb-6 h-6 w-6 text-gold opacity-60 md:mb-9 md:h-8 md:w-8" />
+          <h2 className="mb-4 font-serif text-2xl font-black text-white md:text-4xl">Quantum Hospitality Solutions</h2>
+          <p className="mb-6 max-w-[440px] text-xs leading-relaxed text-white/45 md:mb-4 md:text-sm">
             AI-powered operational tools built by a hotel operator, for hotel operators.
           </p>
-          <span className="font-mono text-[10px] tracking-[2px] text-white/20 uppercase">
+          <span className="max-w-[300px] font-mono text-[8px] tracking-[1px] text-white/20 uppercase md:max-w-none md:text-[10px] md:tracking-[2px]">
             Attenda · ReviewFlow · EventFlow · ShuttleFlow · DirectoryOS · SEO Engine · Content Studio
           </span>
-          <div className="my-11 h-14 w-[1px] bg-gradient-to-b from-transparent via-gold to-transparent" />
-          <div className="font-serif text-2xl italic text-white/30">Somehow I Managed</div>
-          <div className="mt-2 font-mono text-[10px] tracking-[3px] uppercase text-white/10">Hospitality Edition · First Print</div>
+          <div className="my-8 h-10 w-[1px] bg-gradient-to-b from-transparent via-gold to-transparent md:my-11 md:h-14" />
+          <div className="font-serif text-xl italic text-white/30 md:text-2xl">Somehow I Managed</div>
+          <div className="mt-2 font-mono text-[8px] tracking-[2px] uppercase text-white/10 md:text-[10px] md:tracking-[3px]">Hospitality Edition · First Print</div>
         </section>
 
         {/* Share Section */}
-        <section className="border-t border-white/10 bg-[#050505] px-8 py-20 text-center md:px-20">
-          <span className="mb-5 block font-mono text-[10px] tracking-[5px] uppercase text-gold">Spread the Word</span>
-          <h2 className="mb-3 font-serif text-3xl font-black text-white">Know someone who needs this?</h2>
-          <p className="mx-auto mb-9 max-w-[440px] text-sm leading-relaxed text-white/45">
+        <section className="border-t border-white/10 bg-[#050505] px-6 py-16 text-center md:px-20 md:py-20">
+          <span className="mb-5 block font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">Spread the Word</span>
+          <h2 className="mb-3 font-serif text-2xl font-black text-white md:text-3xl">Know someone who needs this?</h2>
+          <p className="mx-auto mb-8 max-w-[440px] text-xs leading-relaxed text-white/45 md:mb-9 md:text-sm">
             Share with 5 colleagues in hospitality. They will thank you for it.
           </p>
           
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-2 md:gap-3">
             <a 
               href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg bg-[#0077b5] px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              className="flex items-center gap-2 rounded-lg bg-[#0077b5] px-4 py-2.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:px-5 md:py-3 md:text-sm"
             >
               <Linkedin className="h-4 w-4" />
               LinkedIn
@@ -1236,7 +1244,7 @@ export default function App() {
               href={`https://wa.me/?text=${encodedText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg bg-[#25d366] px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              className="flex items-center gap-2 rounded-lg bg-[#25d366] px-4 py-2.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:px-5 md:py-3 md:text-sm"
             >
               <MessageCircle className="h-4 w-4" />
               WhatsApp
@@ -1245,32 +1253,54 @@ export default function App() {
               href={`https://twitter.com/intent/tweet?text=${encodedText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg bg-black border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              className="flex items-center gap-2 rounded-lg bg-black border border-white/20 px-4 py-2.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:px-5 md:py-3 md:text-sm"
             >
               <Twitter className="h-4 w-4" />
               X
             </a>
             <a 
               href={`mailto:?subject=You need to read this book&body=${encodedText}`}
-              className="flex items-center gap-2 rounded-lg bg-[#1a1a1a] border border-white/10 px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              className="flex items-center gap-2 rounded-lg bg-[#1a1a1a] border border-white/10 px-4 py-2.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:px-5 md:py-3 md:text-sm"
             >
               <Mail className="h-4 w-4" />
               Email
             </a>
             <button 
               onClick={copyLink}
-              className="flex items-center gap-2 rounded-lg bg-gold px-5 py-3 text-sm font-semibold text-black transition-transform hover:-translate-y-0.5"
+              className="flex items-center gap-2 rounded-lg bg-gold px-4 py-2.5 text-xs font-semibold text-black transition-transform hover:-translate-y-0.5 md:px-5 md:py-3 md:text-sm"
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               {copied ? "Copied!" : "Copy Link"}
             </button>
           </div>
           
-          <p className="mt-4 font-mono text-[10px] tracking-wider text-white/15 uppercase">Audiobook coming soon</p>
+          <p className="mt-6 font-mono text-[8px] tracking-wider text-white/15 uppercase md:mt-4 md:text-[10px]">Audiobook coming soon</p>
         </section>
 
       </div>
       
+      {/* Fixed Navigation Menu */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 md:bottom-10 md:right-10">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-gold text-black shadow-lg shadow-gold/20 transition-colors hover:bg-yellow"
+          title="Scroll to Top"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => document.getElementById('toc')?.scrollIntoView({ behavior: 'smooth' })}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg shadow-white/10 transition-colors hover:bg-white/90"
+          title="Table of Contents"
+        >
+          <Menu className="h-5 w-5" />
+        </motion.button>
+      </div>
+
       {/* Toast Notification */}
       <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 rounded-md bg-gold px-6 py-3 font-bold text-black transition-all duration-300 ${copied ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0 pointer-events-none'}`}>
         Copied!

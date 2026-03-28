@@ -40,10 +40,17 @@ body {
 
 .dropcap::first-letter {
   font-family: var(--font-serif);
-  font-size: 64px;
+  font-size: 48px;
   font-weight: 900;
   float: left;
   line-height: 0.82;
-  margin: 10px 13px 0 0;
+  margin: 8px 10px 0 0;
   color: var(--gold);
+}
+
+@media (min-width: 768px) {
+  .dropcap::first-letter {
+    font-size: 64px;
+    margin: 10px 13px 0 0;
+  }
 }
