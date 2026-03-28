@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider, syncUser } from '../firebase';
+import { Mail, User, ArrowRight, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { signInWithPopup, signInAnonymously, updateProfile } from 'firebase/auth';
+import { auth, googleProvider, syncUser, saveEntry } from '../firebase';
 
 interface EntryGateProps {
   onAccessGranted: () => void;
@@ -11,11 +11,12 @@ interface EntryGateProps {
 }
 
 export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
 
-  // Check if access was already granted in this session
   useEffect(() => {
     const accessGranted = sessionStorage.getItem('immersive_access_granted');
     if (accessGranted === 'true') {
@@ -24,24 +25,57 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
     }
   }, [onAccessGranted]);
 
+  const grantAccess = () => {
+    sessionStorage.setItem('immersive_access_granted', 'true');
+    setIsVisible(false);
+    setTimeout(() => onAccessGranted(), 500);
+  };
+
   const handleGoogleSignIn = async () => {
     setIsSubmitting(true);
     setError(null);
-
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const referrerCode = localStorage.getItem('quantum_referrer');
       await syncUser(result.user, referrerCode);
-      sessionStorage.setItem('immersive_access_granted', 'true');
-      setIsVisible(false);
-      setTimeout(() => onAccessGranted(), 500);
+      grantAccess();
     } catch (err: any) {
-      console.error('Sign-in error:', err);
+      console.error('Google sign-in error:', err);
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         setError('Sign-in was cancelled. Please try again.');
       } else {
-        setError('Sign-in failed. Please try again.');
+        setError('Google sign-in failed. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      // Sign in anonymously so auth.currentUser is set
+      const result = await signInAnonymously(auth);
+      // Attach the display name to the anonymous user
+      await updateProfile(result.user, { displayName: name.trim() });
+      // Save their name + email to entries collection
+      await saveEntry(name.trim(), email.trim());
+      // Sync a basic user profile
+      const referrerCode = localStorage.getItem('quantum_referrer');
+      await syncUser(
+        { ...result.user, displayName: name.trim(), email: email.trim() },
+        referrerCode
+      );
+      grantAccess();
+    } catch (err: any) {
+      console.error('Email entry error:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -74,22 +108,21 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
               </div>
               <h1 className="mb-2 font-serif text-3xl font-black tracking-tight text-white">Unlock the Experience</h1>
               <p className="text-sm text-white/40">
-                Sign in to begin the immersive journey of <span className="italic text-gold/60">Somehow I&nbsp;&nbsp;MANAGED</span>.
+                Join the immersive journey of <span className="italic text-gold/60">Somehow I&nbsp;&nbsp;MANAGED</span>.
               </p>
             </div>
 
-            {/* Google Sign-In Button */}
+            {/* Google Sign-In */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isSubmitting}
-              className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-lg border border-white/10 bg-white/5 py-4 font-mono text-xs font-bold uppercase tracking-[2px] text-white transition-all hover:bg-white/10 disabled:opacity-50"
+              className="group flex w-full items-center justify-center gap-3 rounded-lg border border-white/10 bg-white/5 py-4 font-mono text-xs font-bold uppercase tracking-[2px] text-white transition-all hover:bg-white/10 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  {/* Google Icon */}
                   <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -100,6 +133,61 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
                 </>
               )}
             </button>
+
+            {/* Divider */}
+            <div className="my-6 flex items-center gap-4">
+              <div className="h-px flex-1 bg-white/5" />
+              <span className="font-mono text-[10px] uppercase tracking-[2px] text-white/20">or</span>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+
+            {/* Email + Name Form */}
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-white/30">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/10 focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/50 transition-all disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-white/30">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/10 focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/50 transition-all disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-gold py-4 font-mono text-xs font-bold uppercase tracking-[2px] text-black transition-all hover:bg-yellow-400 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    Enter Experience
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </button>
+            </form>
 
             {error && (
               <motion.div
@@ -113,21 +201,10 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
             )}
 
             {/* Footer */}
-            <div className="mt-8 border-t border-white/5 pt-6 text-center space-y-2">
+            <div className="mt-8 border-t border-white/5 pt-6 text-center">
               <p className="font-mono text-[8px] uppercase tracking-[1px] text-white/20">
                 Hospitality Edition · First Print · Interactive
               </p>
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('open-community'));
-                  }}
-                  className="block mx-auto font-mono text-[8px] uppercase tracking-[1px] text-gold/40 hover:text-gold transition-colors"
-                >
-                  Community Access
-                </button>
-              </div>
             </div>
           </motion.div>
         </motion.div>
