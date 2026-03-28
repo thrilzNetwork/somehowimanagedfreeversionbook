@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Key, Mail, User, ArrowRight, Loader2, AlertCircle, Chrome, Sparkles, ShieldCheck } from 'lucide-react';
 import { saveEntry, auth, googleProvider, syncUser, updateUserConsent } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 interface EntryGateProps {
   onAccessGranted: () => void;
@@ -13,6 +13,7 @@ interface EntryGateProps {
 export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted, hasApiKey, onSelectKey }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
@@ -30,7 +31,7 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted, hasApiKey
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) {
+    if (!name || !email || !password) {
       setError('Please fill in all fields.');
       return;
     }
@@ -39,13 +40,25 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted, hasApiKey
     setError(null);
 
     try {
-      await saveEntry(name, email);
-      sessionStorage.setItem('immersive_access_granted', 'true');
-      setIsVisible(false);
-      setTimeout(() => onAccessGranted(), 500); // Wait for animation
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      const referrerCode = localStorage.getItem('quantum_referrer');
+      const userData = await syncUser(userCredential.user, referrerCode);
+      if (referrerCode) {
+        localStorage.removeItem('quantum_referrer');
+      }
+      
+      if (!userData?.communityConsent) {
+        setUser(userCredential.user);
+        setShowConsent(true);
+      } else {
+        sessionStorage.setItem('immersive_access_granted', 'true');
+        setIsVisible(false);
+        setTimeout(() => onAccessGranted(), 500);
+      }
     } catch (err: any) {
-      console.error('Entry error:', err);
-      setError('Something went wrong. Please try again.');
+      console.error('Sign-up error:', err);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -212,6 +225,21 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted, hasApiKey
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="michael@dundermifflin.com"
+                        className="w-full rounded-lg border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/10 focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/50 transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block font-mono text-[10px] uppercase tracking-[2px] text-white/30">Password</label>
+                    <div className="relative">
+                      <Key className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
                         className="w-full rounded-lg border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/10 focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/50 transition-all"
                         required
                       />

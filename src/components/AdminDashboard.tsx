@@ -51,7 +51,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
     type: 'drop',
     minTier: 'basic',
     url: '',
-    imageUrl: ''
+    imageUrl: '',
+    youtubeUrl: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -118,7 +119,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
     setIsSubmitting(true);
     try {
       await addCommunityContent(newContent);
-      setNewContent({ title: '', body: '', type: 'drop', minTier: 'basic', url: '' });
+      setNewContent({
+        title: '',
+        body: '',
+        type: 'drop',
+        minTier: 'basic',
+        url: '',
+        imageUrl: '',
+        youtubeUrl: ''
+      });
       const updatedContent = await getCommunityContent();
       setContent(updatedContent || []);
       alert('Content added successfully!');
@@ -351,6 +360,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
                         placeholder="Image URL (optional)"
                         value={newContent.imageUrl}
                         onChange={e => setNewContent({...newContent, imageUrl: e.target.value})}
+                        className="rounded-lg border border-white/10 bg-black/40 p-3 text-sm text-white focus:border-gold/50 outline-none"
+                      />
+                      <input 
+                        placeholder="YouTube URL (optional)"
+                        value={newContent.youtubeUrl}
+                        onChange={e => setNewContent({...newContent, youtubeUrl: e.target.value})}
                         className="rounded-lg border border-white/10 bg-black/40 p-3 text-sm text-white focus:border-gold/50 outline-none"
                       />
                       <select 

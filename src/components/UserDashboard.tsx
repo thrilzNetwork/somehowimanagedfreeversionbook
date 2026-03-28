@@ -301,6 +301,16 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                           </div>
                           <h4 className="mb-2 text-lg font-bold text-white">{item.title}</h4>
                           <p className="text-sm leading-relaxed text-white/60">{item.body}</p>
+                          {item.youtubeUrl && (
+                            <div className="mt-4 aspect-video w-full overflow-hidden rounded-lg">
+                              <iframe
+                                src={`https://www.youtube.com/embed/${item.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}`}
+                                className="h-full w-full"
+                                allowFullScreen
+                                title="YouTube video"
+                              />
+                            </div>
+                          )}
                           {item.url && (
                             <a href={item.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-gold hover:underline">
                               View Details <ExternalLink className="h-3 w-3" />
@@ -420,6 +430,16 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                         )}
                         <h4 className="mb-2 text-xl font-bold text-white">{item.title}</h4>
                         <p className="text-sm leading-relaxed text-white/60">{item.body}</p>
+                        {item.youtubeUrl && (
+                          <div className="mt-4 aspect-video w-full overflow-hidden rounded-lg">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${item.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}`}
+                              className="h-full w-full"
+                              allowFullScreen
+                              title="YouTube video"
+                            />
+                          </div>
+                        )}
                         {item.url && (
                           <a href={item.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-gold hover:underline">
                             Read More <ExternalLink className="h-3 w-3" />
