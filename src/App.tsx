@@ -214,19 +214,7 @@ export default function App() {
       setUser(currentUser);
       if (currentUser) {
         const userProfile = await getUserProfile(currentUser.uid);
-        setProfile(userProfile || null);
-        // Close sign-in gate if it was open (e.g. session restored mid-gate)
-        setIsSignUpModalOpen(false);
-        // Restore admin dashboard on /admin page reload
-        if (window.location.pathname === '/admin' && currentUser.email === 'thrilznetwork@gmail.com') {
-          setIsAdminOpen(true);
-        }
-      } else {
-        setProfile(null);
-        // Prompt sign-in only on /admin when unauthenticated
-        if (window.location.pathname === '/admin') {
-          setIsSignUpModalOpen(true);
-        }
+        setProfile(userProfile);
       }
     });
     return () => unsubscribe();
@@ -273,11 +261,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    const handleOpenAdmin = () => setIsAdminOpen(true);
-    window.addEventListener('open-admin', handleOpenAdmin);
+    if (window.location.pathname === '/admin') {
+      setIsAdminOpen(true);
+    }
+    
     window.addEventListener('open-community', handleOpenCommunity);
     return () => {
-      window.removeEventListener('open-admin', handleOpenAdmin);
       window.removeEventListener('open-community', handleOpenCommunity);
     };
   }, []);
@@ -525,18 +514,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
       {isSignUpModalOpen && (
-        <EntryGate
+        <EntryGate 
           onAccessGranted={() => {
             setIsSignUpModalOpen(false);
-            const isAdmin = auth.currentUser?.email === 'thrilznetwork@gmail.com';
-            const isAdminRoute = window.location.pathname === '/admin';
-            if (isAdminRoute && isAdmin) {
-              setIsAdminOpen(true);
-            } else if (!isAdminRoute) {
-              // Always open member area after sign-in (non-admin, non-admin route)
-              setIsCommunityOpen(true);
-            }
-          }}
+            setIsCommunityOpen(true);
+          }} 
           hasApiKey={hasApiKey}
           onSelectKey={handleOpenSelectKey}
         />
@@ -1507,21 +1489,19 @@ export default function App() {
                 <Book className="h-5 w-5" />
               </motion.button>
 
-              {/* Admin Button — only visible to the administrator */}
-              {user?.email === 'thrilznetwork@gmail.com' && (
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => {
-                    setIsAdminOpen(true);
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/20 text-gold shadow-lg shadow-gold/10 transition-colors hover:bg-gold/30"
-                  title="Admin Dashboard"
-                >
-                  <Users className="h-5 w-5" />
-                </motion.button>
-              )}
+              {/* Admin Button (Only visible if admin=true in URL or just hidden) */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  setIsAdminOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/20 text-gold shadow-lg shadow-gold/10 transition-colors hover:bg-gold/30"
+                title="Admin Dashboard"
+              >
+                <Users className="h-5 w-5" />
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
