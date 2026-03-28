@@ -167,20 +167,35 @@ export default function App() {
   
   const generationQueue = useRef<string[]>([]);
   const isProcessingQueue = useRef(false);
+  const isPaused = useRef(false);
 
   const processQueue = async () => {
-    if (isProcessingQueue.current || generationQueue.current.length === 0) return;
+    if (isProcessingQueue.current || generationQueue.current.length === 0 || isPaused.current) return;
     
     isProcessingQueue.current = true;
-    while (generationQueue.current.length > 0) {
+    while (generationQueue.current.length > 0 && !isPaused.current) {
       const chapterId = generationQueue.current.shift();
       if (!chapterId) continue;
       
       const chapter = CHAPTERS.find(c => c.id === chapterId);
       if (chapter) {
-        await generateChapterImage(chapter.prompt, chapterId);
+        const success = await generateChapterImage(chapter.prompt, chapterId);
+        
+        if (!success) {
+          // If it failed with a quota error, we might want to stop processing for a while
+          // The generateChapterImage already sets the error state
+          // We'll pause the queue for 30 seconds
+          isPaused.current = true;
+          console.log("Queue paused due to quota error. Resuming in 30s...");
+          setTimeout(() => {
+            isPaused.current = false;
+            processQueue();
+          }, 30000);
+          break;
+        }
+
         // Cooldown between requests to respect rate limits
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 3000));
       }
     }
     isProcessingQueue.current = false;
@@ -231,8 +246,8 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const generateChapterImage = async (prompt: string, chapterId: string, retryCount = 0) => {
-    if (!ai || chapterImages[chapterId]) return;
+  const generateChapterImage = async (prompt: string, chapterId: string, retryCount = 0): Promise<boolean> => {
+    if (!ai || chapterImages[chapterId]) return true;
     
     setGeneratingImageId(chapterId);
     setErrorIds(prev => ({ ...prev, [chapterId]: false }));
@@ -254,9 +269,10 @@ export default function App() {
         if (part.inlineData) {
           const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
           setChapterImages(prev => ({ ...prev, [chapterId]: imageUrl }));
-          break;
+          return true;
         }
       }
+      return false;
     } catch (error: any) {
       console.error("Image Generation Error:", error);
       
@@ -272,7 +288,9 @@ export default function App() {
 
       if (isQuotaError) {
         setErrorIds(prev => ({ ...prev, [chapterId]: true }));
+        return false;
       }
+      return false;
     } finally {
       setGeneratingImageId(null);
     }
@@ -1063,10 +1081,19 @@ export default function App() {
           <span className="mb-8 block font-mono text-[10px] tracking-[5px] uppercase text-gold md:mb-12 md:text-xs">About the Author</span>
           <div className="mt-8 grid grid-cols-1 gap-8 md:mt-12 md:grid-cols-[170px_1fr] md:gap-11">
             <div className="flex flex-col items-center md:items-start">
-              <div className="relative flex h-[210px] w-[170px] items-center justify-center bg-[#111] text-4xl font-black text-gold/20 before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-full before:bg-gold">
-                AS
+              <div className="relative flex h-[210px] w-[170px] flex-col items-center justify-center bg-[#111] p-6 text-center before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-full before:bg-gold">
+                <span className="mb-4 font-mono text-[9px] uppercase tracking-[3px] text-gold">Interactive Edition</span>
+                <p className="font-serif text-[11px] italic leading-relaxed text-white/60">
+                  This is the interactive version.
+                </p>
+                <div className="my-3 h-[1px] w-8 bg-gold/20" />
+                <p className="font-serif text-[11px] italic leading-relaxed text-white/60">
+                  Hard copy full chapters drop April 13.
+                </p>
+                <div className="mt-5 rounded-sm border border-gold/20 bg-gold/5 px-2 py-1 font-mono text-[8px] uppercase tracking-[1px] text-gold/80">
+                  Sign up for waiting list
+                </div>
               </div>
-              <div className="mt-2 font-mono text-[9px] tracking-[2px] uppercase text-white/20">Alejandro Soria</div>
             </div>
             <div className="text-center md:text-left">
               <h2 className="mb-1 font-serif text-3xl font-black tracking-tight text-white md:text-4xl">Alejandro Soria</h2>
