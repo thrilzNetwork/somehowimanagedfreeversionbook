@@ -18,10 +18,17 @@ import {
   Menu,
   Info,
   ChevronDown,
+  AlertCircle,
+  RefreshCw,
+  Headphones,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
 import { STATIC_CHAPTER_IMAGES } from "./chapterAssets";
+import { EntryGate } from './components/EntryGate';
+import { FocusAudio } from './components/FocusAudio';
 
 const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 
@@ -155,6 +162,7 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
 };
 
 export default function App() {
+  const [isAccessGranted, setIsAccessGranted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [chapterImages, setChapterImages] = useState<Record<string, string>>(STATIC_CHAPTER_IMAGES);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
@@ -325,10 +333,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">
-      <motion.div 
-        className="fixed top-0 left-0 z-[100] h-1 bg-gold" 
-        style={{ width: `${scrollProgress}%` }}
-      />
+      <EntryGate onAccessGranted={() => setIsAccessGranted(true)} />
+      
+      <AnimatePresence>
+        {isAccessGranted && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1 }}
+          >
+            <motion.div 
+              className="fixed top-0 left-0 z-[100] h-1 bg-gold" 
+              style={{ width: `${scrollProgress}%` }}
+            />
 
       <div className="mx-auto max-w-[820px] bg-black">
         
@@ -1208,7 +1225,9 @@ export default function App() {
       </div>
       
       {/* Fixed Navigation Menu */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 md:bottom-10 md:right-10">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 md:bottom-10 md:right-10">
+        <FocusAudio />
+        
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -1233,6 +1252,9 @@ export default function App() {
       <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 rounded-md bg-gold px-6 py-3 font-bold text-black transition-all duration-300 ${copied ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0 pointer-events-none'}`}>
         Copied!
       </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

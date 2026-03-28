@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: entries
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, 1-100 chars) - User's full name
+    //   - email: string (required, valid email format) - User's email address
+    //   - timestamp: timestamp (required) - When the entry was created
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidEntry(data) {
+      return data.keys().hasAll(['name', 'email', 'timestamp']) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             isValidEmail(data.email) &&
+             data.timestamp is timestamp;
+    }
+
+    // Rules for entries collection
+    match /entries/{entryId} {
+      // Allow anyone to create an entry with valid data.
+      allow create: if isValidEntry(request.resource.data);
+      
+      // Only the user who created the entry (if they had a UID) or an admin can read it.
+      // For this app, we'll keep it simple: no one can read entries from the client
+      // except for potential admin roles we might add later.
+      allow read: if false; 
+      
+      // Entries are immutable after creation
+      allow update, delete: if false;
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
