@@ -17,7 +17,8 @@ import {
   Pause,
   Image as ImageIcon,
   Sparkles,
-  Loader2
+  Loader2,
+  Settings
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { GoogleGenAI, Modality } from "@google/genai";
@@ -27,18 +28,138 @@ const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 // Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const LivingPortrait = ({ src, alt, isGenerating }: { src?: string, alt: string, isGenerating: boolean }) => {
+  return (
+    <div className="relative mb-12">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative overflow-hidden rounded-lg border-[12px] border-[#1a1a1a] shadow-2xl bg-[#050505]"
+        style={{ 
+          boxShadow: 'inset 0 0 100px rgba(0,0,0,0.8), 0 20px 50px rgba(0,0,0,0.9)',
+          aspectRatio: '16/9'
+        }}
+      >
+        {isGenerating && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-gold" />
+              <span className="font-mono text-[10px] tracking-[2px] uppercase text-gold/60">Brewing visual magic...</span>
+            </div>
+          </div>
+        )}
+        
+        {src ? (
+          <>
+            {/* Glass Reflection Overlay */}
+            <motion.div 
+              animate={{ 
+                opacity: [0.1, 0.2, 0.1],
+                x: [-10, 10, -10],
+                y: [-10, 10, -10]
+              }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-transparent mix-blend-overlay" 
+            />
+            
+            {/* Dust/Grain Overlay */}
+            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] mix-blend-screen" />
+
+            <motion.img 
+              src={src} 
+              alt={alt} 
+              className="w-full h-full object-cover sepia-[0.2] brightness-[0.85] contrast-[1.1]"
+              animate={{
+                scale: [1, 1.01, 1],
+                filter: [
+                  'sepia(0.2) brightness(0.85) contrast(1.1)',
+                  'sepia(0.25) brightness(0.9) contrast(1.15)',
+                  'sepia(0.2) brightness(0.85) contrast(1.1)'
+                ]
+              }}
+              transition={{
+                duration: 12,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              referrerPolicy="no-referrer" 
+            />
+          </>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-gold/20 italic font-serif px-8 text-center">
+            <Sparkles className="h-8 w-8 opacity-20" />
+            <p className="text-sm">Click "Visualize" to bring this chapter to life with a magical living portrait.</p>
+          </div>
+        )}
+      </motion.div>
+      
+      {/* Antique Frame Corners */}
+      <div className="absolute -top-2 -left-2 h-8 w-8 border-t-2 border-l-2 border-gold/40 rounded-tl-sm pointer-events-none" />
+      <div className="absolute -top-2 -right-2 h-8 w-8 border-t-2 border-r-2 border-gold/40 rounded-tr-sm pointer-events-none" />
+      <div className="absolute -bottom-2 -left-2 h-8 w-8 border-b-2 border-l-2 border-gold/40 rounded-bl-sm pointer-events-none" />
+      <div className="absolute -bottom-2 -right-2 h-8 w-8 border-b-2 border-r-2 border-gold/40 rounded-br-sm pointer-events-none" />
+    </div>
+  );
+};
+
 export default function App() {
   const [copied, setCopied] = useState(false);
   const [isNarrating, setIsNarrating] = useState(false);
-  const [currentChapterAudio, setCurrentChapterAudio] = useState<string | null>(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [chapterImages, setChapterImages] = useState<Record<string, string>>({});
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [calcRevenue, setCalcRevenue] = useState(10000);
   const [calcGop, setCalcGop] = useState(6000);
+  const [selectedVoice, setSelectedVoice] = useState<'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Zephyr'>('Fenrir');
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  const stopNarration = () => {
+    if (audioSourceRef.current) {
+      audioSourceRef.current.stop();
+      audioSourceRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    setIsNarrating(false);
+  };
+
+  const playPCM = async (base64Data: string) => {
+    stopNarration();
+    
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    audioContextRef.current = audioContext;
+
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const arrayBuffer = bytes.buffer;
+    const dataView = new DataView(arrayBuffer);
+    const float32Data = new Float32Array(arrayBuffer.byteLength / 2);
+    
+    for (let i = 0; i < float32Data.length; i++) {
+      float32Data[i] = dataView.getInt16(i * 2, true) / 32768;
+    }
+
+    const audioBuffer = audioContext.createBuffer(1, float32Data.length, 24000);
+    audioBuffer.getChannelData(0).set(float32Data);
+
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.onended = () => setIsNarrating(false);
+    
+    audioSourceRef.current = source;
+    source.start();
+    setIsNarrating(true);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -58,14 +179,7 @@ export default function App() {
 
   const generateNarration = async (text: string, chapterId: string) => {
     if (isNarrating) {
-      audioRef.current?.pause();
-      setIsNarrating(false);
-      return;
-    }
-
-    if (currentChapterAudio && audioRef.current) {
-      audioRef.current.play();
-      setIsNarrating(true);
+      stopNarration();
       return;
     }
 
@@ -73,12 +187,12 @@ export default function App() {
     try {
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Read this chapter excerpt from "Somehow I Managed" with a professional, warm, and authoritative hospitality leader voice: ${text.substring(0, 1000)}` }] }],
+        contents: [{ parts: [{ text: `Read this chapter excerpt from "Somehow I Managed" with a professional, warm, and authoritative hospitality leader voice. Use natural pacing, emphasize key management terms, and sound like a mentor: ${text.substring(0, 1000)}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Fenrir' }, // Strong, authoritative voice
+              prebuiltVoiceConfig: { voiceName: selectedVoice },
             },
           },
         },
@@ -86,9 +200,7 @@ export default function App() {
 
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
-        const audioUrl = `data:audio/mp3;base64,${base64Audio}`;
-        setCurrentChapterAudio(audioUrl);
-        setIsNarrating(true);
+        await playPCM(base64Audio);
       }
     } catch (error) {
       console.error("TTS Error:", error);
@@ -103,7 +215,7 @@ export default function App() {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A cinematic, high-end editorial photograph for a luxury hospitality management book. Theme: ${prompt}. Style: Moody lighting, professional, architectural, deep blacks and gold accents.` }],
+          parts: [{ text: `A magical Harry Potter style living portrait. Theme: ${prompt}. The subject should appear as if they are subtly moving or breathing. Style: Cinematic, moody lighting, dark background, antique gold frame, high-end editorial, deep blacks and gold accents.` }],
         },
         config: {
           imageConfig: {
@@ -126,12 +238,6 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    if (currentChapterAudio && audioRef.current) {
-      audioRef.current.play();
-    }
-  }, [currentChapterAudio]);
-
   const shareText = "This free book by Alejandro Soria is the manual I wish I had in hospitality. Somehow I Managed:";
   const encodedUrl = encodeURIComponent(BOOK_URL);
   const encodedText = encodeURIComponent(`${shareText} ${BOOK_URL}`);
@@ -141,12 +247,6 @@ export default function App() {
       <motion.div 
         className="fixed top-0 left-0 z-[100] h-1 bg-gold" 
         style={{ width: `${scrollProgress}%` }}
-      />
-      <audio 
-        ref={audioRef} 
-        src={currentChapterAudio || undefined} 
-        onEnded={() => setIsNarrating(false)}
-        className="hidden"
       />
 
       <div className="mx-auto max-w-[820px] bg-black">
@@ -181,15 +281,32 @@ export default function App() {
               Alejandro Soria
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => generateNarration("Welcome to Somehow I Managed. I'm Alejandro Soria.", "intro")}
-              className="mt-12 flex items-center gap-3 rounded-full border border-gold/30 bg-gold/10 px-6 py-3 font-mono text-[10px] tracking-[2px] uppercase text-gold transition-all hover:bg-gold/20"
-            >
-              {isLoadingAudio ? <Loader2 className="h-4 w-4 animate-spin" /> : isNarrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              {isNarrating ? "Stop Narration" : "Listen to Intro"}
-            </motion.button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-black/40 px-3 py-1">
+                <Settings className="h-3 w-3 text-gold/60" />
+                <select 
+                  value={selectedVoice}
+                  onChange={(e) => setSelectedVoice(e.target.value as any)}
+                  className="bg-transparent font-mono text-[9px] tracking-[1px] uppercase text-gold/80 outline-none"
+                >
+                  <option value="Fenrir">Fenrir (Authoritative)</option>
+                  <option value="Kore">Kore (Warm)</option>
+                  <option value="Zephyr">Zephyr (Professional)</option>
+                  <option value="Puck">Puck (Energetic)</option>
+                  <option value="Charon">Charon (Deep)</option>
+                </select>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => generateNarration("Welcome to Somehow I Managed. I'm Alejandro Soria.", "intro")}
+                className="flex items-center gap-3 rounded-full border border-gold/30 bg-gold/10 px-6 py-3 font-mono text-[10px] tracking-[2px] uppercase text-gold transition-all hover:bg-gold/20"
+              >
+                {isLoadingAudio ? <Loader2 className="h-4 w-4 animate-spin" /> : isNarrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                {isNarrating ? "Stop Narration" : "Listen to Intro"}
+              </motion.button>
+            </div>
           </motion.div>
           
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] tracking-[4px] uppercase text-white/10">
@@ -262,7 +379,18 @@ export default function App() {
         <section id="ch0" className="border-b border-white/10 px-8 py-20 md:px-20">
           <div className="mb-12 flex items-center justify-between">
             <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">00 · Foreword</span>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
               <button 
                 onClick={() => generateNarration("The Houseman Who Fell in Love. Before anything else, let me be clear about what this book is and what it is not.", "ch0")}
                 className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
@@ -285,17 +413,11 @@ export default function App() {
             "I showed up thinking I was going to work in an office. I was. It just needed to be cleaned first."
           </span>
           
-          <AnimatePresence>
-            {chapterImages['ch0'] && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mb-12 overflow-hidden rounded-lg border border-white/10"
-              >
-                <img src={chapterImages['ch0']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <LivingPortrait 
+            src={chapterImages['ch0']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch0'} 
+          />
 
           <div className="markdown-body">
             <p className="dropcap">
@@ -342,7 +464,18 @@ export default function App() {
         <section id="ch1" className="border-b border-white/10 px-8 py-20 md:px-20">
           <div className="mb-12 flex items-center justify-between">
             <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">01 · Day Zero</span>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
               <button 
                 onClick={() => generateNarration("Opening a Hotel From Scratch. You will never feel ready. Open anyway.", "ch1")}
                 className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
@@ -365,17 +498,11 @@ export default function App() {
             "You will never feel ready. Open anyway. The hotel will finish building itself around you."
           </span>
 
-          <AnimatePresence>
-            {chapterImages['ch1'] && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mb-12 overflow-hidden rounded-lg border border-white/10"
-              >
-                <img src={chapterImages['ch1']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <LivingPortrait 
+            src={chapterImages['ch1']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch1'} 
+          />
           
           <div className="markdown-body">
             <p className="dropcap">
@@ -429,7 +556,18 @@ export default function App() {
         <section id="ch2" className="border-b border-white/10 px-8 py-20 md:px-20">
           <div className="mb-12 flex items-center justify-between">
             <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">02 · The Turnaround</span>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
               <button 
                 onClick={() => generateNarration("Walking Into a Broken Property. Don't fix what you see first. Understand what broke it.", "ch2")}
                 className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
@@ -452,17 +590,11 @@ export default function App() {
             "Don't fix what you see first. Understand what broke it."
           </span>
 
-          <AnimatePresence>
-            {chapterImages['ch2'] && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mb-12 overflow-hidden rounded-lg border border-white/10"
-              >
-                <img src={chapterImages['ch2']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <LivingPortrait 
+            src={chapterImages['ch2']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch2'} 
+          />
           
           <div className="markdown-body">
             <p className="dropcap">
@@ -512,7 +644,18 @@ export default function App() {
         <section id="ch3" className="border-b border-white/10 px-8 py-20 md:px-20">
           <div className="mb-12 flex items-center justify-between">
             <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">03 · The Money People</span>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
               <button 
                 onClick={() => generateNarration("Managing Ownership and Investors. They own the building. You run the building.", "ch3")}
                 className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
@@ -535,17 +678,11 @@ export default function App() {
             "They own the building. You run the building. These are not the same job."
           </span>
 
-          <AnimatePresence>
-            {chapterImages['ch3'] && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mb-12 overflow-hidden rounded-lg border border-white/10"
-              >
-                <img src={chapterImages['ch3']} alt="Visualizing the story" className="w-full grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <LivingPortrait 
+            src={chapterImages['ch3']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch3'} 
+          />
           
           <div className="markdown-body">
             <p className="dropcap">
@@ -595,6 +732,420 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* Chapter 04 */}
+        <section id="ch4" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">04 · People First</span>
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
+              <button 
+                onClick={() => generateNarration("Your Team Is Everything. Real culture is what happens when you aren't in the room.", "ch4")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A diverse hotel team standing together in a modern lobby, warm lighting", "ch4")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch4' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Your Team Is Everything</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "Real culture is not a ping-pong table or a pizza party. It's what happens when you aren't in the room."
+          </span>
+
+          <LivingPortrait 
+            src={chapterImages['ch4']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch4'} 
+          />
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              In hospitality, we talk about "service" as if it's something we can buy or install. It isn't. Service is an output of culture. And culture is the sum of every interaction your team has with each other. If your front desk agent is being treated poorly by their supervisor, they will eventually treat a guest poorly. It's a thermodynamic law of management: energy is conserved.
+            </p>
+            
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] p-8">
+              <span className="mb-6 block font-mono text-[10px] tracking-[3px] uppercase text-gold">Interactive Tool — The Turnover Cost Calculator</span>
+              <div className="space-y-6">
+                <p className="text-sm text-white/60">Most managers underestimate the cost of losing a single line-level employee. Let's look at the reality.</p>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                  <div className="rounded border border-white/5 bg-white/5 p-5">
+                    <span className="mb-2 block text-[10px] font-bold uppercase text-gold/60">Recruitment</span>
+                    <span className="font-serif text-2xl font-bold text-white">$1,500</span>
+                    <p className="mt-1 text-[10px] text-white/40">Ads, interviewing time, background checks.</p>
+                  </div>
+                  <div className="rounded border border-white/5 bg-white/5 p-5">
+                    <span className="mb-2 block text-[10px] font-bold uppercase text-gold/60">Training</span>
+                    <span className="font-serif text-2xl font-bold text-white">$2,200</span>
+                    <p className="mt-1 text-[10px] text-white/40">Shadowing, reduced productivity, supervisor time.</p>
+                  </div>
+                  <div className="rounded border border-white/5 bg-white/5 p-5">
+                    <span className="mb-2 block text-[10px] font-bold uppercase text-gold/60">Lost Knowledge</span>
+                    <span className="font-serif text-2xl font-bold text-white">$1,800</span>
+                    <p className="mt-1 text-[10px] text-white/40">Guest relationships, property-specific nuances.</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                  <span className="font-mono text-xs uppercase tracking-wider text-white/40">Total Estimated Cost per Exit:</span>
+                  <span className="font-serif text-3xl font-black text-gold">$5,500</span>
+                </div>
+              </div>
+            </div>
+
+            <p>
+              Retention is not about paying the most. It's about being the place where people feel like they belong. I learned this from my brother, Juan Carlos. He didn't just manage people; he cared for them. He knew their kids' names, their struggles, their ambitions. He loved the people before he loved the business. And because of that, the business loved him back.
+            </p>
+
+            <div className="my-10 border-l-[3px] border-yellow bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Lesson 04</span>
+              <h4 className="mb-3 font-serif text-xl font-bold text-white">Hire for attitude, train for skill.</h4>
+              <p className="text-sm leading-relaxed text-white/80">
+                I can teach anyone to use a PMS. I cannot teach someone to care about a guest's lost luggage at 2 AM. If they don't have the "hospitality heart" on day one, they won't have it on day one hundred. Don't compromise on the human element to fill a shift.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Chapter 05 */}
+        <section id="ch5" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">05 · F&B Strategy</span>
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
+              <button 
+                onClick={() => generateNarration("F&B Is Not an Amenity. Stop treating your restaurant like a loss leader.", "ch5")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A beautifully plated dish in a dimly lit, high-end hotel restaurant", "ch5")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch5' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">F&B Is Not an Amenity</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "Stop treating your restaurant like a loss leader. It's a profit center that happens to serve food."
+          </span>
+
+          <LivingPortrait 
+            src={chapterImages['ch5']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch5'} 
+          />
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              In many hotels, F&B is the department that everyone complains about but nobody wants to fix. It's "too expensive," "too hard to manage," or "just there for the guests." This is a failure of imagination. F&B is your most powerful tool for local engagement and brand identity. It's where the building comes alive.
+            </p>
+            
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] p-8">
+              <span className="mb-6 block font-mono text-[10px] tracking-[3px] uppercase text-gold">The F&B Profitability Matrix</span>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded border border-white/5 bg-white/5 p-6">
+                  <h5 className="mb-3 font-serif text-lg font-bold text-white">The Breakfast Trap</h5>
+                  <p className="text-xs leading-relaxed text-white/60">
+                    Free breakfast is a commodity. A <i>great</i> breakfast is a memory. If you're select-service, your breakfast is the last thing a guest experiences before they leave. Don't let it be a lukewarm buffet. Elevate one thing — the coffee, the local pastry, the service — and you elevate the whole stay.
+                  </p>
+                </div>
+                <div className="rounded border border-white/5 bg-white/5 p-6">
+                  <h5 className="mb-3 font-serif text-lg font-bold text-white">Labor vs. Revenue</h5>
+                  <p className="text-xs leading-relaxed text-white/60">
+                    F&B labor is the most volatile line item on your P&L. If you aren't cross-training your front desk to help during peak breakfast hours, or your servers to understand basic front desk tasks, you are leaving money on the table. Flexibility is the only way to protect your margins.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p>
+              Revenue strategy in F&B isn't just about menu prices. It's about capturing the "captive audience." Your guests are already in the building. Why are they ordering Uber Eats? If they are, you've failed to provide value, convenience, or quality. Fix that, and you fix your F&B P&L.
+            </p>
+
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 05</span>
+              <h4 className="mb-3 font-serif text-xl font-bold text-white">Measure what matters.</h4>
+              <p className="text-sm leading-relaxed text-white/80">
+                Stop looking at F&B in isolation. Look at it as a driver of RevPAR. A hotel with a top-rated restaurant can command a higher ADR across the board. The restaurant is the "vibe" that guests pay for, even if they only eat there once.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Chapter 06 */}
+        <section id="ch6" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">06 · Modernization</span>
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
+              <button 
+                onClick={() => generateNarration("The Last Industry to Modernize. Technology is not your enemy. It's your leverage.", "ch6")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A futuristic hotel lobby with subtle holographic displays and warm wood accents", "ch6")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch6' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">The Last Industry to Modernize</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "Technology is not your enemy. It's your leverage. Use it to be more human, not less."
+          </span>
+
+          <LivingPortrait 
+            src={chapterImages['ch6']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch6'} 
+          />
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              Hospitality is notoriously slow to change. We still use systems built in the 90s. We still rely on manual checklists and paper logs. This gap is your greatest advantage. If you can embrace technology while everyone else is resisting it, you can operate at a level of efficiency and personalization they can't even imagine.
+            </p>
+            
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] p-8">
+              <span className="mb-6 block font-mono text-[10px] tracking-[3px] uppercase text-gold">Quantum Hospitality Solutions — The AI Advantage</span>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="rounded border border-white/5 bg-white/5 p-5">
+                  <span className="mb-2 block text-[10px] font-bold uppercase text-gold/60">ReviewFlow</span>
+                  <p className="text-[11px] leading-relaxed text-white/60">AI-powered guest review management that sounds human, not robotic.</p>
+                </div>
+                <div className="rounded border border-white/5 bg-white/5 p-5">
+                  <span className="mb-2 block text-[10px] font-bold uppercase text-gold/60">EventFlow</span>
+                  <p className="text-[11px] leading-relaxed text-white/60">Streamlining group bookings and event coordination with intelligent automation.</p>
+                </div>
+                <div className="rounded border border-white/5 bg-white/5 p-5">
+                  <span className="mb-2 block text-[10px] font-bold uppercase text-gold/60">ShuttleFlow</span>
+                  <p className="text-[11px] leading-relaxed text-white/60">Real-time tracking and optimization for hotel transportation services.</p>
+                </div>
+              </div>
+            </div>
+
+            <p>
+              The goal of technology in a hotel isn't to replace the front desk agent. It's to free them from the screen. If the AI handles the repetitive tasks — the check-in paperwork, the basic FAQs, the data entry — the agent can actually look the guest in the eye and have a conversation. That is where hospitality happens.
+            </p>
+
+            <div className="my-10 border-l-[3px] border-yellow bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-yellow">Lesson 06</span>
+              <h4 className="mb-3 font-serif text-xl font-bold text-white">Don't be afraid of the "Black Box."</h4>
+              <p className="text-sm leading-relaxed text-white/80">
+                You don't need to understand how the AI works. You need to understand how it helps your team. If it saves them an hour a day, that's an hour they can spend on guest experience. That's an hour they can spend on their own development. That's the real ROI.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Chapter 07 */}
+        <section id="ch7" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">07 · Resilience</span>
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
+              <button 
+                onClick={() => generateNarration("Running on Empty. Burnout is real. Your family is more real.", "ch7")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A quiet, rainy night view from a hotel window, reflective and moody", "ch7")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch7' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">Running on Empty</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "Burnout is not a badge of honor. It's a failure of sustainability."
+          </span>
+
+          <LivingPortrait 
+            src={chapterImages['ch7']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch7'} 
+          />
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              2020 changed everything. For the first time in my career, the buildings were empty. The rhythm stopped. And in that silence, I realized how much I had been sacrificing. I had been running on empty for years, mistaking exhaustion for dedication. I wasn't the only one. Our entire industry was built on the backs of people who didn't know how to stop.
+            </p>
+            
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] p-8">
+              <span className="mb-6 block font-mono text-[10px] tracking-[3px] uppercase text-gold">The Resilience Audit</span>
+              <div className="space-y-4">
+                <p className="text-sm text-white/60">Ask yourself these three questions. If the answer to any is "No," you are at risk.</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded border border-white/5 bg-white/5 p-4">
+                    <CheckSquare className="h-5 w-5 text-gold" />
+                    <span className="text-sm text-white/80">Can your hotel run for 48 hours without you checking your email?</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded border border-white/5 bg-white/5 p-4">
+                    <CheckSquare className="h-5 w-5 text-gold" />
+                    <span className="text-sm text-white/80">Do you know the name of your child's teacher or your partner's best friend?</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded border border-white/5 bg-white/5 p-4">
+                    <CheckSquare className="h-5 w-5 text-gold" />
+                    <span className="text-sm text-white/80">Have you taken a full week off in the last twelve months?</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p>
+              I took a step back. I focused on my family. I realized that the hotel would still be there, but my kids wouldn't be young forever. This wasn't a retreat; it was a recalibration. I came back stronger, more focused, and with a new mission: to build tools that make this industry more sustainable for everyone in it.
+            </p>
+
+            <div className="my-10 border-l-[3px] border-pink bg-[#0d0d0d] px-8 py-7">
+              <span className="mb-3 block font-mono text-[10px] tracking-[3px] uppercase text-pink">Lesson 07</span>
+              <h4 className="mb-3 font-serif text-xl font-bold text-white">Protect your peace.</h4>
+              <p className="text-sm leading-relaxed text-white/80">
+                You cannot pour from an empty cup. If you are burned out, you are a liability to your team and your guests. Learning to say "No" is a leadership skill. Learning to delegate is a leadership skill. Learning to rest is a survival skill.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Chapter 08 */}
+        <section id="ch8" className="border-b border-white/10 px-8 py-20 md:px-20">
+          <div className="mb-12 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[5px] uppercase text-gold">08 · Closing Notes</span>
+            <div className="flex items-center gap-4">
+              <select 
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value as any)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[8px] tracking-[1px] uppercase text-gold/60 outline-none focus:border-gold/30"
+              >
+                <option value="Fenrir">Fenrir</option>
+                <option value="Kore">Kore</option>
+                <option value="Zephyr">Zephyr</option>
+                <option value="Puck">Puck</option>
+                <option value="Charon">Charon</option>
+              </select>
+              <button 
+                onClick={() => generateNarration("What I Know Now. You are not just managing a building. You are managing a legacy.", "ch8")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {isLoadingAudio ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
+                Listen
+              </button>
+              <button 
+                onClick={() => generateChapterImage("A sunrise over a beautiful hotel skyline, hopeful and bright", "ch8")}
+                className="flex items-center gap-2 font-mono text-[9px] tracking-[2px] uppercase text-gold/60 hover:text-gold"
+              >
+                {generatingImageId === 'ch8' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Visualize
+              </button>
+            </div>
+          </div>
+
+          <h2 className="mb-4 font-serif text-4xl font-black tracking-tight md:text-6xl">What I Know Now</h2>
+          <span className="mb-12 block border-b border-gold pb-9 font-serif text-lg italic leading-relaxed text-white/45">
+            "You are not just managing a building. You are managing a legacy. Make it one worth leaving."
+          </span>
+
+          <LivingPortrait 
+            src={chapterImages['ch8']} 
+            alt="Visualizing the story" 
+            isGenerating={generatingImageId === 'ch8'} 
+          />
+          
+          <div className="markdown-body">
+            <p className="dropcap">
+              If you've made it this far, you know that hospitality isn't just a job. It's a calling. It's the art of making people feel at home when they are away from it. It's the science of managing complexity with grace. And it's the privilege of leading teams through some of the hardest shifts of their lives.
+            </p>
+            
+            <p>
+              The title of this book, "Somehow I Managed," is a bit of a joke. Because the truth is, we never just "somehow" manage. We manage with intention. We manage with heart. We manage with a relentless focus on the people who make the building work.
+            </p>
+
+            <div className="my-10 border border-white/10 bg-[#0d0d0d] px-11 py-9 text-center">
+              <Quote className="mx-auto mb-6 h-12 w-12 text-gold opacity-20" />
+              <p className="font-serif text-2xl italic leading-relaxed text-white">
+                "The building is just the stage. The people are the performance. Your job is to make sure the lights never go out on them."
+              </p>
+            </div>
+
+            <p>
+              My hope for you is that you find the same joy in this industry that I have. That you build cultures that people never want to leave. That you use technology to make your life easier and your guests' lives better. And that you never forget why you started in the first place.
+            </p>
+
+            <p className="mt-12 font-serif text-xl font-bold text-gold">
+              Go manage something great.
+            </p>
+            
+            <span className="mt-4 block font-mono text-xs tracking-[3px] uppercase text-white/40">
+              — Alejandro Soria
+            </span>
+          </div>
+        </section>
+
+
+
 
         {/* About Section */}
         <section id="about" className="px-8 py-20 md:px-20">
