@@ -26,8 +26,8 @@ import {
   Headphones,
   LogOut
 } from 'lucide-react';
-import { auth, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap, saveEntry } from '../firebase';
-import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
+import { auth, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap } from '../firebase';
+import { onAuthStateChanged, User as FirebaseUser, signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { generateCareerMindmap } from '../services/aiService';
 
 interface UserDashboardProps {
@@ -185,10 +185,17 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                 const formData = new FormData(e.currentTarget);
                 const name = formData.get('name') as string;
                 const email = formData.get('email') as string;
-                if (name && email) {
-                  await saveEntry(name, email);
-                  alert('Thank you for signing up!');
-                  window.location.reload();
+                const password = formData.get('password') as string;
+                if (name && email && password) {
+                  try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    await updateProfile(userCredential.user, { displayName: name });
+                    alert('Thank you for signing up!');
+                    window.location.reload();
+                  } catch (err: any) {
+                    console.error('Sign up error:', err);
+                    alert(err.message || 'Sign up failed. Please try again.');
+                  }
                 }
               }}
               className="w-full max-w-xs space-y-4"
@@ -203,6 +210,13 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                 name="email" 
                 type="email" 
                 placeholder="Email Address" 
+                required 
+                className="w-full rounded-lg bg-white/5 p-3 text-sm text-white border border-white/10 focus:border-gold outline-none"
+              />
+              <input 
+                name="password" 
+                type="password" 
+                placeholder="Password" 
                 required 
                 className="w-full rounded-lg bg-white/5 p-3 text-sm text-white border border-white/10 focus:border-gold outline-none"
               />
