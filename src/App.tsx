@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
+import { STATIC_CHAPTER_IMAGES } from "./chapterAssets";
 
 const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
 
@@ -40,7 +41,7 @@ const CHAPTERS = [
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-const LivingPortrait = ({ src, alt, isGenerating, explanation }: { src?: string, alt: string, isGenerating: boolean, explanation?: string }) => {
+const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry }: { src?: string, alt: string, isGenerating: boolean, explanation?: string, hasError?: boolean, onRetry?: () => void }) => {
   return (
     <div className="relative mb-8 md:mb-12">
       <motion.div 
@@ -56,6 +57,26 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation }: { src?: string,
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-gold" />
               <span className="font-mono text-[10px] tracking-[2px] uppercase text-gold/60">Developing visual...</span>
+            </div>
+          </div>
+        )}
+
+        {hasError && !isGenerating && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4 px-6 text-center">
+              <div className="rounded-full bg-red-500/10 p-3">
+                <Info className="h-6 w-6 text-red-500" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-serif text-sm text-white/90">Quota Exceeded</p>
+                <p className="text-[10px] text-white/40 leading-relaxed">The visual developer is resting. Please try again in a moment.</p>
+              </div>
+              <button 
+                onClick={onRetry}
+                className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-2 font-mono text-[10px] tracking-[2px] uppercase text-gold hover:bg-gold/20 transition-colors"
+              >
+                Retry Development
+              </button>
             </div>
           </div>
         )}
@@ -135,13 +156,64 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation }: { src?: string,
 
 export default function App() {
   const [copied, setCopied] = useState(false);
-  const [chapterImages, setChapterImages] = useState<Record<string, string>>({});
+  const [chapterImages, setChapterImages] = useState<Record<string, string>>(STATIC_CHAPTER_IMAGES);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [explainingId, setExplainingId] = useState<string | null>(null);
+  const [errorIds, setErrorIds] = useState<Record<string, boolean>>({});
   const [scrollProgress, setScrollProgress] = useState(0);
   const [calcRevenue, setCalcRevenue] = useState(10000);
   const [calcGop, setCalcGop] = useState(6000);
+  
+  const generationQueue = useRef<string[]>([]);
+  const isProcessingQueue = useRef(false);
+
+  const processQueue = async () => {
+    if (isProcessingQueue.current || generationQueue.current.length === 0) return;
+    
+    isProcessingQueue.current = true;
+    while (generationQueue.current.length > 0) {
+      const chapterId = generationQueue.current.shift();
+      if (!chapterId) continue;
+      
+      const chapter = CHAPTERS.find(c => c.id === chapterId);
+      if (chapter) {
+        await generateChapterImage(chapter.prompt, chapterId);
+        // Cooldown between requests to respect rate limits
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+    isProcessingQueue.current = false;
+  };
+
+  // Intersection Observer for lazy generation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const chapterId = entry.target.getAttribute('data-chapter-id');
+            if (chapterId && !chapterImages[chapterId] && !generationQueue.current.includes(chapterId) && !errorIds[chapterId]) {
+              generationQueue.current.push(chapterId);
+              processQueue();
+            }
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    const sections = document.querySelectorAll('section[id^="ch"]');
+    sections.forEach(section => {
+      const id = section.getAttribute('id');
+      if (id) {
+        section.setAttribute('data-chapter-id', id);
+        observer.observe(section);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [chapterImages, errorIds]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -150,17 +222,6 @@ export default function App() {
       setScrollProgress(progress);
     };
     window.addEventListener("scroll", handleScroll);
-    
-    // Auto-generate all images on load
-    const generateAll = async () => {
-      for (const chapter of CHAPTERS) {
-        await generateChapterImage(chapter.prompt, chapter.id);
-        // Small delay to avoid hitting rate limits too hard
-        await new Promise(r => setTimeout(r, 1000));
-      }
-    };
-    generateAll();
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -170,10 +231,12 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const generateChapterImage = async (prompt: string, chapterId: string) => {
+  const generateChapterImage = async (prompt: string, chapterId: string, retryCount = 0) => {
     if (!ai || chapterImages[chapterId]) return;
     
     setGeneratingImageId(chapterId);
+    setErrorIds(prev => ({ ...prev, [chapterId]: false }));
+    
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
@@ -194,8 +257,22 @@ export default function App() {
           break;
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Image Generation Error:", error);
+      
+      const isQuotaError = error?.message?.includes('429') || error?.message?.includes('quota');
+      
+      if (isQuotaError && retryCount < 2) {
+        // Exponential backoff: 5s, 10s
+        const delay = (retryCount + 1) * 5000;
+        console.log(`Retrying image generation for ${chapterId} in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        return generateChapterImage(prompt, chapterId, retryCount + 1);
+      }
+
+      if (isQuotaError) {
+        setErrorIds(prev => ({ ...prev, [chapterId]: true }));
+      }
     } finally {
       setGeneratingImageId(null);
     }
@@ -361,6 +438,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch0'} 
             explanation={explanations['ch0']}
+            hasError={errorIds['ch0']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch0')?.prompt || '', 'ch0')}
           />
 
           <div className="markdown-body">
@@ -430,6 +509,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch1'} 
             explanation={explanations['ch1']}
+            hasError={errorIds['ch1']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch1')?.prompt || '', 'ch1')}
           />
           
           <div className="markdown-body">
@@ -506,6 +587,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch2'} 
             explanation={explanations['ch2']}
+            hasError={errorIds['ch2']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch2')?.prompt || '', 'ch2')}
           />
           
           <div className="markdown-body">
@@ -578,6 +661,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch3'} 
             explanation={explanations['ch3']}
+            hasError={errorIds['ch3']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch3')?.prompt || '', 'ch3')}
           />
           
           <div className="markdown-body">
@@ -655,6 +740,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch4'} 
             explanation={explanations['ch4']}
+            hasError={errorIds['ch4']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch4')?.prompt || '', 'ch4')}
           />
           
           <div className="markdown-body">
@@ -730,6 +817,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch5'} 
             explanation={explanations['ch5']}
+            hasError={errorIds['ch5']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch5')?.prompt || '', 'ch5')}
           />
           
           <div className="markdown-body">
@@ -795,6 +884,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch6'} 
             explanation={explanations['ch6']}
+            hasError={errorIds['ch6']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch6')?.prompt || '', 'ch6')}
           />
           
           <div className="markdown-body">
@@ -860,6 +951,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch7'} 
             explanation={explanations['ch7']}
+            hasError={errorIds['ch7']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch7')?.prompt || '', 'ch7')}
           />
           
           <div className="markdown-body">
@@ -928,6 +1021,8 @@ export default function App() {
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch8'} 
             explanation={explanations['ch8']}
+            hasError={errorIds['ch8']}
+            onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch8')?.prompt || '', 'ch8')}
           />
           
           <div className="markdown-body">
