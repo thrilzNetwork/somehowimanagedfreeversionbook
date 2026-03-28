@@ -8,7 +8,7 @@ export const FocusAudio: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const AUDIO_URL = "https://soundcloud.com/thrilz-network/music-focus"; // New Focus Track
+  const AUDIO_URL = "https://soundcloud.com/thrilz-network/music-focus?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing&si=0e1cd95c4d98429ab6f8a03df3a3154c"; // New Focus Track
 
   const togglePlay = () => {
     if (!audioRef.current) return;
