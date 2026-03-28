@@ -60,20 +60,41 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-export const syncUser = async (user: any) => {
+export const syncUser = async (user: any, referrerCode?: string | null) => {
   const path = `users/${user.uid}`;
   try {
     const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDoc(userRef);
     
     if (!userSnap.exists()) {
+      const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      let referredBy = null;
+
+      // If a referrer code was provided, find the referrer
+      if (referrerCode) {
+        const q = query(collection(db, 'users'), where('referralCode', '==', referrerCode));
+        const referrerSnap = await getDocs(q);
+        if (!referrerSnap.empty) {
+          const referrerDoc = referrerSnap.docs[0];
+          referredBy = referrerDoc.id;
+          
+          // Increment referrer's points
+          await updateDoc(doc(db, 'users', referredBy), {
+            points: (referrerDoc.data().points || 0) + 1
+          });
+        }
+      }
+
       await setDoc(userRef, {
         uid: user.uid,
         name: user.displayName || 'Anonymous',
         email: user.email,
         photoURL: user.photoURL,
         tier: 'basic',
-        joinedAt: serverTimestamp()
+        joinedAt: serverTimestamp(),
+        referralCode,
+        points: 0,
+        referredBy
       });
     }
     const finalSnap = await getDoc(userRef);

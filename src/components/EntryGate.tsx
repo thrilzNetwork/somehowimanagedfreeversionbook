@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Key, Mail, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
-import { saveEntry } from '../firebase';
+import { Key, Mail, User, ArrowRight, Loader2, AlertCircle, Chrome } from 'lucide-react';
+import { saveEntry, auth, googleProvider, syncUser } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 interface EntryGateProps {
   onAccessGranted: () => void;
@@ -41,6 +42,27 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
     } catch (err: any) {
       console.error('Entry error:', err);
       setError('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const referrerCode = localStorage.getItem('quantum_referrer');
+      await syncUser(result.user, referrerCode);
+      if (referrerCode) {
+        localStorage.removeItem('quantum_referrer');
+      }
+      sessionStorage.setItem('immersive_access_granted', 'true');
+      setIsVisible(false);
+      setTimeout(() => onAccessGranted(), 500);
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      setError('Failed to sign in with Google. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -133,6 +155,22 @@ export const EntryGate: React.FC<EntryGateProps> = ({ onAccessGranted }) => {
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </>
                 )}
+              </button>
+
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-white/5"></div>
+                <span className="mx-4 flex-shrink font-mono text-[8px] uppercase tracking-[1px] text-white/20">or</span>
+                <div className="flex-grow border-t border-white/5"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isSubmitting}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-3 text-xs font-medium text-white transition-all hover:bg-white/10 disabled:opacity-50"
+              >
+                <Chrome className="h-4 w-4 text-gold" />
+                Continue with Google
               </button>
             </form>
 

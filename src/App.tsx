@@ -32,11 +32,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
 import { STATIC_CHAPTER_IMAGES } from "./chapterAssets";
 import { EntryGate } from './components/EntryGate';
+import { auth, getUserProfile } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { FocusAudio } from './components/FocusAudio';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserDashboard } from './components/UserDashboard';
 
-const BOOK_URL = typeof window !== 'undefined' ? window.location.href : '';
+const BASE_URL = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
+const BOOK_URL = BASE_URL;
 
 const CHAPTERS = [
   { id: "ch0", title: "Foreword", prompt: "A young man cleaning a luxury hotel lobby at night, cinematic lighting" },
@@ -168,7 +171,28 @@ const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry
 };
 
 export default function App() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('quantum_referrer', ref);
+    }
+  }, []);
+
   const [isAccessGranted, setIsAccessGranted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userProfile = await getUserProfile(currentUser.uid);
+        setProfile(userProfile);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isCommunityOpen, setIsCommunityOpen] = useState(false);
@@ -269,7 +293,7 @@ export default function App() {
   }, []);
 
   const copyLink = () => {
-    navigator.clipboard.writeText(BOOK_URL);
+    navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -347,9 +371,10 @@ export default function App() {
     }
   };
 
+  const referralLink = profile?.referralCode ? `${BASE_URL}?ref=${profile.referralCode}` : BASE_URL;
   const shareText = "I'm reading 'Somehow I&nbsp;&nbsp;MANAGED' by Alejandro Soria. Use my link to unlock exclusive free gifts and prizes! 🎁";
-  const encodedUrl = encodeURIComponent(BOOK_URL);
-  const encodedText = encodeURIComponent(`${shareText} ${BOOK_URL}`);
+  const encodedUrl = encodeURIComponent(referralLink);
+  const encodedText = encodeURIComponent(`${shareText} ${referralLink}`);
 
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-gold selection:text-black">

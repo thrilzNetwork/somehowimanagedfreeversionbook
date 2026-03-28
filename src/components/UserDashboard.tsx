@@ -15,7 +15,11 @@ import {
   ExternalLink, 
   ChevronRight, 
   ShieldCheck, 
-  Star 
+  Star,
+  Share2,
+  Award,
+  Copy,
+  Check
 } from 'lucide-react';
 import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -36,15 +40,22 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
   const [consultationMsg, setConsultationMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const userProfile = await syncUser(currentUser);
+        const referrerCode = localStorage.getItem('quantum_referrer') || undefined;
+        const userProfile = await syncUser(currentUser, referrerCode);
         setProfile(userProfile);
         const communityContent = await getCommunityContent();
         setContent(communityContent || []);
+        
+        // Clear referrer after sync
+        if (referrerCode) {
+          localStorage.removeItem('quantum_referrer');
+        }
       }
       setIsLoading(false);
     });
@@ -179,6 +190,35 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                   Free Books
                 </button>
               </div>
+            </div>
+
+            {/* Referral Info Bar */}
+            <div className="flex flex-col items-center justify-between gap-4 border-b border-white/5 bg-gold/[0.02] p-4 md:flex-row md:px-6">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-gold" />
+                  <span className="text-xs font-bold text-white/60">Points:</span>
+                  <span className="text-sm font-black text-gold">{profile?.points || 0}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-gold" />
+                  <span className="text-xs font-bold text-white/60">Referral Code:</span>
+                  <span className="font-mono text-sm font-bold text-white">{profile?.referralCode}</span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?ref=${profile?.referralCode}`;
+                  navigator.clipboard.writeText(url);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="flex items-center gap-2 rounded-lg border border-gold/20 bg-gold/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] text-gold transition-all hover:bg-gold/10"
+              >
+                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                {copied ? "Copied!" : "Copy Referral Link"}
+              </button>
             </div>
 
             {/* Content Area */}

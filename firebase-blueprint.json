@@ -21,9 +21,12 @@
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
         "tier": { "type": "string", "enum": ["basic", "premium", "elite"] },
-        "joinedAt": { "type": "string", "format": "date-time" }
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "referralCode": { "type": "string", "description": "Unique code for referrals." },
+        "referredBy": { "type": "string", "description": "UID of the user who referred this member." },
+        "points": { "type": "number", "description": "Points earned through referrals." }
       },
-      "required": ["uid", "name", "email", "tier", "joinedAt"]
+      "required": ["uid", "name", "email", "tier", "joinedAt", "referralCode", "points"]
     },
     "Content": {
       "title": "Content",
