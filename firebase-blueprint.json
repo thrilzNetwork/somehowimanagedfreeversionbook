@@ -24,7 +24,8 @@
         "joinedAt": { "type": "string", "format": "date-time" },
         "referralCode": { "type": "string", "description": "Unique code for referrals." },
         "referredBy": { "type": "string", "description": "UID of the user who referred this member." },
-        "points": { "type": "number", "description": "Points earned through referrals." }
+        "points": { "type": "number", "description": "Points earned through referrals." },
+        "careerProfile": { "type": "string", "description": "User's self-described career history and goals." }
       },
       "required": ["uid", "name", "email", "tier", "joinedAt", "referralCode", "points"]
     },

@@ -130,6 +130,14 @@ export const updateUserTier = async (uid: string, tier: string) => {
   }
 };
 
+export const updateCareerProfile = async (uid: string, careerProfile: string) => {
+  try {
+    await updateDoc(doc(db, 'users', uid), { careerProfile });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
 export const addCommunityContent = async (content: any) => {
   try {
     await addDoc(collection(db, 'content'), {

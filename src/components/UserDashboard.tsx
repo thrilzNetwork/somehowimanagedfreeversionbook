@@ -19,10 +19,14 @@ import {
   Share2,
   Award,
   Copy,
-  Check
+  Check,
+  Brain,
+  Save,
+  Sparkles
 } from 'lucide-react';
-import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation } from '../firebase';
+import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { generateCareerMindmap } from '../services/aiService';
 
 interface UserDashboardProps {
   onClose: () => void;
@@ -34,7 +38,13 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
   const [content, setContent] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'feed' | 'hire' | 'books'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'hire' | 'books' | 'profile'>('feed');
+  
+  // Career Profile State
+  const [careerText, setCareerText] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [mindmap, setMindmap] = useState<string | null>(null);
+  const [isGeneratingMindmap, setIsGeneratingMindmap] = useState(false);
   
   // Consultation State
   const [consultationMsg, setConsultationMsg] = useState('');
@@ -49,6 +59,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
         const referrerCode = localStorage.getItem('quantum_referrer') || undefined;
         const userProfile = await syncUser(currentUser, referrerCode);
         setProfile(userProfile);
+        setCareerText(userProfile?.careerProfile || '');
         const communityContent = await getCommunityContent();
         setContent(communityContent || []);
         
@@ -73,6 +84,31 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!user || !careerText.trim()) return;
+    setIsSavingProfile(true);
+    try {
+      await updateCareerProfile(user.uid, careerText);
+      setProfile(prev => ({ ...prev, careerProfile: careerText }));
+    } catch (err) {
+      console.error('Error saving profile:', err);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleGenerateMindmap = async () => {
+    if (!careerText.trim()) return;
+    setIsGeneratingMindmap(true);
+    try {
+      const result = await generateCareerMindmap(careerText);
+      setMindmap(result);
+    } catch (err) {
+      console.error('Error generating mindmap:', err);
+    } finally {
+      setIsGeneratingMindmap(false);
+    }
+  };
   const handleConsultation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !consultationMsg.trim()) return;
@@ -188,6 +224,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                   className={`rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'books' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
                   Free Books
+                </button>
+                <button 
+                  onClick={() => setActiveTab('profile')}
+                  className={`rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] transition-all ${activeTab === 'profile' ? 'bg-gold text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                >
+                  My Profile
                 </button>
               </div>
             </div>
@@ -338,6 +380,77 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                         No PDF resources available for your tier.
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'profile' && (
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="font-serif text-2xl font-bold text-white mb-2">Career Journey</h3>
+                      <p className="text-sm text-white/40 mb-6">Describe your current role, your aspirations, and your journey in hospitality. Alejandro uses this to hand-pick professionals for the community.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <textarea 
+                        value={careerText}
+                        onChange={e => setCareerText(e.target.value)}
+                        placeholder="Tell us about yourself, your experience, and where you want to go..."
+                        className="w-full h-64 rounded-xl border border-white/10 bg-white/[0.02] p-6 text-sm text-white focus:border-gold/50 outline-none resize-none transition-all"
+                      />
+                      
+                      <div className="flex gap-4">
+                        <button 
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile || !careerText.trim()}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-4 text-xs font-bold uppercase tracking-[1px] text-black hover:bg-yellow disabled:opacity-50 transition-all"
+                        >
+                          {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                          Save Profile
+                        </button>
+                        
+                        <button 
+                          onClick={handleGenerateMindmap}
+                          disabled={isGeneratingMindmap || !careerText.trim()}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gold/30 bg-gold/5 py-4 text-xs font-bold uppercase tracking-[1px] text-gold hover:bg-gold/10 disabled:opacity-50 transition-all"
+                        >
+                          {isGeneratingMindmap ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+                          Request Mindmap
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-serif text-2xl font-bold text-white">Career Mindmap</h3>
+                      {mindmap && (
+                        <span className="flex items-center gap-1 text-[10px] uppercase tracking-[1px] text-gold">
+                          <Sparkles className="h-3 w-3" /> Generated by AI
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="min-h-[400px] rounded-xl border border-white/5 bg-white/[0.01] p-6">
+                      {!mindmap && !isGeneratingMindmap ? (
+                        <div className="flex h-full flex-col items-center justify-center text-center p-10">
+                          <Brain className="h-12 w-12 text-white/10 mb-4" />
+                          <p className="text-sm text-white/20">Save your profile and request a mindmap to see your potential next moves in hospitality.</p>
+                        </div>
+                      ) : isGeneratingMindmap ? (
+                        <div className="flex h-full flex-col items-center justify-center text-center p-10">
+                          <Loader2 className="h-12 w-12 animate-spin text-gold mb-4" />
+                          <p className="text-sm text-gold animate-pulse">Alejandro is analyzing your profile...</p>
+                        </div>
+                      ) : (
+                        <div className="prose prose-invert prose-sm max-w-none">
+                          <div className="whitespace-pre-wrap text-white/80 leading-relaxed">
+                            {mindmap}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

@@ -85,7 +85,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId);
       allow update: if isAuthenticated() && (
-        isOwner(userId) || isAdmin()
+        (isOwner(userId) && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['careerProfile']) ||
+          (request.resource.data.tier == resource.data.tier && request.resource.data.points == resource.data.points)
+        )) || 
+        isAdmin()
       );
     }
 
