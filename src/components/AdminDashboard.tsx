@@ -18,7 +18,8 @@ import {
   CheckCircle, 
   Trash2, 
   Zap, 
-  ShieldCheck 
+  ShieldCheck,
+  Headphones
 } from 'lucide-react';
 import { auth, googleProvider, getEntries, getAllUsers, updateUserTier, addCommunityContent, getCommunityContent, getConsultations } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -278,16 +279,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <div className="rounded-xl border border-gold/20 bg-gold/5 p-6">
                     <div className="mb-4 flex items-center justify-between">
                       <h4 className="text-sm font-bold uppercase tracking-[1px] text-gold">Visual Assets</h4>
-                      <button 
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('generate-all-images'));
-                          alert('Batch generation started. This may take a few minutes.');
-                        }}
-                        className="flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] text-black hover:bg-yellow transition-all"
-                      >
-                        <Zap className="h-3 w-3" />
-                        Generate All Visuals (Pro)
-                      </button>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('generate-all-images'));
+                            alert('Batch generation started. This may take a few minutes.');
+                          }}
+                          className="flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-[10px] font-bold uppercase tracking-[1px] text-black hover:bg-yellow transition-all"
+                        >
+                          <Zap className="h-3 w-3" />
+                          Generate All Visuals (Pro)
+                        </button>
+                      </div>
                     </div>
                     <p className="mb-4 text-[11px] leading-relaxed text-white/40">
                       Trigger a batch generation of all chapter visuals using the Gemini 3 Pro model. This ensures all readers see high-fidelity cinematic imagery.
@@ -313,6 +316,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         <option value="price">Price Update</option>
                         <option value="pdf">PDF Resource</option>
                         <option value="job">Hire Opportunity</option>
+                        <option value="podcast">Podcast</option>
+                        <option value="blog">Blog</option>
                       </select>
                       <textarea 
                         placeholder="Body content..."
@@ -351,7 +356,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       <div key={item.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-4">
                         <div className="flex items-center gap-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-white/40">
-                            {item.type === 'drop' ? <Zap className="h-5 w-5" /> : item.type === 'price' ? <TrendingUp className="h-5 w-5" /> : item.type === 'pdf' ? <FileText className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
+                            {item.type === 'drop' ? <Zap className="h-5 w-5" /> : item.type === 'price' ? <TrendingUp className="h-5 w-5" /> : item.type === 'pdf' ? <FileText className="h-5 w-5" /> : item.type === 'podcast' ? <Headphones className="h-5 w-5" /> : item.type === 'blog' ? <FileText className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
                           </div>
                           <div>
                             <div className="text-sm font-bold text-white">{item.title}</div>

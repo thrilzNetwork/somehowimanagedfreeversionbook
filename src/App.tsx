@@ -222,7 +222,23 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isCommunityOpen, setIsCommunityOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [chapterImages, setChapterImages] = useState<Record<string, string>>(STATIC_CHAPTER_IMAGES);
+  const initialImages = Object.entries(STATIC_CHAPTER_IMAGES).reduce((acc, [key, value]) => {
+    acc[key] = { imageUrl: value };
+    return acc;
+  }, {} as Record<string, { imageUrl: string }>);
+
+  const [chapterImages, setChapterImages] = useState<Record<string, { imageUrl: string }>>(initialImages);
+  
+  useEffect(() => {
+    const loadImages = async () => {
+      const visuals = await getChapterVisuals();
+      if (visuals && Object.keys(visuals).length > 0) {
+        setChapterImages(prev => ({ ...prev, ...visuals }));
+      }
+    };
+    loadImages();
+  }, []);
+
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [explainingId, setExplainingId] = useState<string | null>(null);
@@ -386,7 +402,7 @@ export default function App() {
             img.onerror = () => resolve(originalImageUrl);
           });
 
-          setChapterImages(prev => ({ ...prev, [chapterId]: compressedImageUrl }));
+          setChapterImages(prev => ({ ...prev, [chapterId]: { imageUrl: compressedImageUrl } }));
           // Save to Firestore for persistence
           await saveChapterVisual(chapterId, compressedImageUrl, prompt);
           return true;
@@ -394,13 +410,15 @@ export default function App() {
       }
       return false;
     } catch (error: any) {
-      console.error("Image Generation Error:", error);
+      console.error("Image Generation Error:", JSON.stringify(error));
       
       const isQuotaError = error?.message?.includes('429') || error?.message?.includes('quota');
       const isKeyError = error?.message?.includes('Requested entity was not found');
+      const isPermissionError = error?.message?.includes('403') || error?.message?.includes('PERMISSION_DENIED');
 
-      if (isKeyError) {
+      if (isKeyError || isPermissionError) {
         setHasApiKey(false);
+        await window.aistudio.openSelectKey();
         return false;
       }
       
@@ -617,7 +635,7 @@ export default function App() {
           </span>
           
           <LivingPortrait 
-            src={chapterImages['ch0']} 
+            src={chapterImages['ch0']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch0'} 
             explanation={explanations['ch0']}
@@ -688,7 +706,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch1']} 
+            src={chapterImages['ch1']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch1'} 
             explanation={explanations['ch1']}
@@ -766,7 +784,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch2']} 
+            src={chapterImages['ch2']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch2'} 
             explanation={explanations['ch2']}
@@ -840,7 +858,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch3']} 
+            src={chapterImages['ch3']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch3'} 
             explanation={explanations['ch3']}
@@ -935,7 +953,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch4']} 
+            src={chapterImages['ch4']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch4'} 
             explanation={explanations['ch4']}
@@ -1012,7 +1030,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch5']} 
+            src={chapterImages['ch5']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch5'} 
             explanation={explanations['ch5']}
@@ -1079,7 +1097,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch6']} 
+            src={chapterImages['ch6']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch6'} 
             explanation={explanations['ch6']}
@@ -1146,7 +1164,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch7']} 
+            src={chapterImages['ch7']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch7'} 
             explanation={explanations['ch7']}
@@ -1216,7 +1234,7 @@ export default function App() {
           </span>
 
           <LivingPortrait 
-            src={chapterImages['ch8']} 
+            src={chapterImages['ch8']?.imageUrl}
             alt="Visualizing the story" 
             isGenerating={generatingImageId === 'ch8'} 
             explanation={explanations['ch8']}

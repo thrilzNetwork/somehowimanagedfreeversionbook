@@ -22,7 +22,8 @@ import {
   Check,
   Brain,
   Save,
-  Sparkles
+  Sparkles,
+  Headphones
 } from 'lucide-react';
 import { auth, googleProvider, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile } from '../firebase';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -134,7 +135,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     return userTierIndex >= itemTierIndex;
   });
 
-  const feedItems = filteredContent.filter(i => i.type === 'drop' || i.type === 'price');
+  const feedItems = filteredContent.filter(i => i.type === 'drop' || i.type === 'price' || i.type === 'podcast' || i.type === 'blog');
   const hireItems = filteredContent.filter(i => i.type === 'job');
   const bookItems = filteredContent.filter(i => i.type === 'pdf');
 
@@ -283,7 +284,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                         >
                           <div className="mb-3 flex items-center justify-between">
                             <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[1px] text-gold">
-                              {item.type === 'drop' ? <Zap className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
+                              {item.type === 'drop' ? <Zap className="h-3 w-3" /> : item.type === 'podcast' ? <Headphones className="h-3 w-3" /> : item.type === 'blog' ? <FileText className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                               {item.type}
                             </span>
                             <span className="text-[10px] text-white/20">{item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recently'}</span>

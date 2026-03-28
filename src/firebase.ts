@@ -94,8 +94,14 @@ export const syncUser = async (user: any, referrerCode?: string | null) => {
         joinedAt: serverTimestamp(),
         referralCode,
         points: 0,
-        referredBy
+        referredBy,
+        communityConsent: false
       });
+    } else {
+      const data = userSnap.data();
+      if (data.communityConsent === undefined) {
+        await updateDoc(userRef, { communityConsent: false });
+      }
     }
     const finalSnap = await getDoc(userRef);
     return finalSnap.data();
@@ -125,6 +131,14 @@ export const getAllUsers = async () => {
 export const updateUserTier = async (uid: string, tier: string) => {
   try {
     await updateDoc(doc(db, 'users', uid), { tier });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+};
+
+export const updateUserConsent = async (uid: string, consent: boolean) => {
+  try {
+    await updateDoc(doc(db, 'users', uid), { communityConsent: consent });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
   }
@@ -230,10 +244,12 @@ export const getChapterVisuals = async () => {
   const path = 'chapter_visuals';
   try {
     const snapshot = await getDocs(collection(db, path));
-    const visuals: Record<string, string> = {};
+    const visuals: Record<string, { imageUrl: string }> = {};
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      visuals[data.chapterId] = data.imageUrl;
+      visuals[data.chapterId] = {
+        imageUrl: data.imageUrl
+      };
     });
     return visuals;
   } catch (error) {
