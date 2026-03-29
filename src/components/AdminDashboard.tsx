@@ -206,6 +206,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
             <h3 className="mb-2 text-xl font-bold text-white">Restricted Access</h3>
             <p className="mb-8 max-w-sm text-sm text-white/40">
               This dashboard is only accessible to the authorized administrator.
+              {user && <span className="block mt-2 text-white/60">Current account: {user.email}</span>}
             </p>
             <button
               onClick={handleLogin}
@@ -213,7 +214,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
               className="flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-bold text-black transition-all hover:bg-white/90 disabled:opacity-50"
             >
               {isAuthenticating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-              Sign in as Admin
+              {user ? 'Sign in with different account' : 'Sign in as Admin'}
             </button>
           </div>
         ) : isLoading ? (
