@@ -261,7 +261,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (window.location.pathname === '/admin') {
+    if (window.location.hash === '#/admin') {
       setIsAdminOpen(true);
     }
     
