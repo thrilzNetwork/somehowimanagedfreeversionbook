@@ -96,6 +96,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (result.user.email !== ADMIN_EMAIL) {
+        await signOut(auth);
         setError('Unauthorized access. This dashboard is for the administrator only.');
       }
     } catch (err) {
