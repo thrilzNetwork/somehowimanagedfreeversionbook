@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Headphones, Volume2, Loader2, Sparkles } from 'lucide-react';
+import { Headphones, Volume2, Loader2, Sparkles, Pause } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -70,8 +70,7 @@ export const FocusAudio: React.FC = () => {
     if (!widgetRef.current || !widgetReady) return;
 
     if (isPlaying) {
-      // User requested that once pressed, it cannot stop
-      return;
+      widgetRef.current.pause();
     } else {
       setIsLoading(true);
       widgetRef.current.play();
@@ -107,12 +106,12 @@ export const FocusAudio: React.FC = () => {
             ? 'bg-gold text-black shadow-gold/40' 
             : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
         } ${!widgetReady ? 'opacity-50 cursor-not-allowed' : ''}`}
-        title={isPlaying ? "Stop Focus Audio" : "Play Focus Audio"}
+        title={isPlaying ? "Pause Focus Audio" : "Play Focus Audio"}
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : isPlaying ? (
-          <Volume2 className="h-5 w-5" />
+          <Pause className="h-5 w-5" />
         ) : (
           <Headphones className="h-5 w-5" />
         )}
