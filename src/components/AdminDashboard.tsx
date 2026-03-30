@@ -31,7 +31,7 @@ interface AdminDashboardProps {
   chapters: any[];
 }
 
-const ADMIN_EMAIL = "thrilznetwork@gmail.com";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generateChapterImage, chapters }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);

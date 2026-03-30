@@ -187,6 +187,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                 const email = formData.get('email') as string;
                 const password = formData.get('password') as string;
                 if (name && email && password) {
+                  if (email !== import.meta.env.VITE_ADMIN_EMAIL) {
+                    alert('Sign-ups are currently restricted to the administrator.');
+                    return;
+                  }
                   try {
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     await updateProfile(userCredential.user, { displayName: name });
