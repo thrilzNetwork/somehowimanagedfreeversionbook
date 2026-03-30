@@ -206,7 +206,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
             <h3 className="mb-2 text-xl font-bold text-white">Restricted Access</h3>
             <p className="mb-8 max-w-sm text-sm text-white/40">
               This dashboard is only accessible to the authorized administrator.
-              {user && <span className="block mt-2 text-white/60">Current account: {user.email}</span>}
+              {user && <span className="block mt-2 text-white/60">Current account: {user.email?.replace(/(?<=.{2}).(?=[^@]*?@)/g, "*")}</span>}
             </p>
             <button
               onClick={handleLogin}
