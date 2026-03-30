@@ -99,9 +99,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
         await signOut(auth);
         setError('Unauthorized access. This dashboard is for the administrator only.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login error:', err);
-      setError('Login failed. Please try again.');
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/popup-blocked') {
+        setError('The sign-in popup was blocked or closed. Please ensure popups are allowed, or try opening the app in a new tab.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
     } finally {
       setIsAuthenticating(false);
     }
