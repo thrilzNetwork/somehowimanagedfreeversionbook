@@ -1,4 +1,12 @@
 import { motion, AnimatePresence } from "motion/react";
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+import { CoverSection } from './components/CoverSection';
+import { CinematicPortrait, CHAPTER_MOODS } from './components/CinematicPortrait';
+import { ChapterTitle } from './components/ChapterTitle';
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 import { 
   Key, 
   Linkedin, 
@@ -66,116 +74,7 @@ const CHAPTERS = [
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-const LivingPortrait = ({ src, alt, isGenerating, explanation, hasError, onRetry }: { src?: string, alt: string, isGenerating: boolean, explanation?: string, hasError?: boolean, onRetry?: () => void }) => {
-  return (
-    <div className="relative mb-8 md:mb-12">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative overflow-hidden rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-[#050505]"
-        style={{ 
-          aspectRatio: '16/9'
-        }}
-      >
-        {isGenerating && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-gold" />
-            </div>
-          </div>
-        )}
-
-        {hasError && !isGenerating && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-4 px-6 text-center">
-              <div className="rounded-full bg-red-500/10 p-3">
-                <Info className="h-6 w-6 text-red-500" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-serif text-sm text-white/90">Quota Exceeded</p>
-                <p className="text-[10px] text-white/40 leading-relaxed">The visual developer is resting. Please try again in a moment.</p>
-              </div>
-              <button 
-                onClick={onRetry}
-                className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-2 font-mono text-[10px] tracking-[2px] uppercase text-gold hover:bg-gold/20 transition-colors"
-              >
-                Retry Development
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {src ? (
-          <>
-            {/* Glass Reflection Overlay */}
-            <motion.div 
-              animate={{ 
-                opacity: [0.05, 0.15, 0.05],
-                x: [-20, 20, -20],
-                y: [-10, 10, -10]
-              }}
-              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-transparent mix-blend-overlay" 
-            />
-            
-            {/* Cinematic Shimmer Effect */}
-            <motion.div 
-              animate={{ 
-                x: ['-100%', '200%'],
-                opacity: [0, 0.2, 0]
-              }}
-              transition={{ duration: 8, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
-              className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-transparent via-gold/5 to-transparent skew-x-12" 
-            />
-
-            <motion.img 
-              src={src} 
-              alt={alt} 
-              className="w-full h-full object-cover brightness-[0.9] contrast-[1.05]"
-              animate={{
-                scale: [1, 1.01, 1],
-                filter: [
-                  'brightness(0.9) contrast(1.05)',
-                  'brightness(0.95) contrast(1.1)',
-                  'brightness(0.9) contrast(1.05)'
-                ],
-                x: [-0.5, 0.5, -0.5],
-                y: [-0.5, 0.5, -0.5]
-              }}
-              transition={{
-                duration: 20,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              referrerPolicy="no-referrer" 
-            />
-          </>
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-gold/20 italic font-serif px-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin opacity-20" />
-          </div>
-        )}
-      </motion.div>
-
-      <AnimatePresence>
-        {explanation && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mt-4 rounded-lg border border-gold/10 bg-gold/5 p-6 font-serif text-sm italic leading-relaxed text-white/70"
-          >
-            <div className="mb-2 flex items-center gap-2 font-mono text-[10px] tracking-[2px] uppercase text-gold">
-              <Info className="h-3 w-3" />
-              Guide Note
-            </div>
-            {explanation}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+// LivingPortrait replaced by CinematicPortrait — imported above
 
 export default function App() {
   useEffect(() => {
@@ -223,6 +122,7 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isCommunityOpen, setIsCommunityOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const initialImages = Object.entries(STATIC_CHAPTER_IMAGES).reduce((acc, [key, value]) => {
     acc[key] = { imageUrl: value };
     return acc;
@@ -341,6 +241,163 @@ export default function App() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // GSAP ScrollTrigger: chapter reveals, TOC stagger, scroll-scrubbed progress bar
+  useEffect(() => {
+    if (!isAccessGranted) return;
+
+    // Small delay so the DOM is fully painted
+    const timer = setTimeout(() => {
+      // Progress bar scrub via ScrollTrigger
+      if (progressBarRef.current) {
+        const bar = progressBarRef.current;
+        ScrollTrigger.create({
+          trigger: document.documentElement,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.3,
+          onUpdate: (self) => {
+            bar.style.transform = `scaleX(${self.progress})`;
+          },
+        });
+      }
+
+      // TOC items: stagger in from left
+      const tocItems = Array.from(document.querySelectorAll('#toc a'));
+      if (tocItems.length) {
+        gsap.from(tocItems, {
+          scrollTrigger: {
+            trigger: '#toc',
+            start: 'top 82%',
+          },
+          x: -22,
+          autoAlpha: 0,
+          stagger: 0.055,
+          duration: 0.55,
+          ease: 'power2.out',
+        });
+      }
+
+      // Chapter heading labels (e.g. "01 · Day Zero")
+      const chapterLabels = Array.from(
+        document.querySelectorAll('section[id^="ch"] > div > span:first-child')
+      );
+      chapterLabels.forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 90%' },
+          x: -16,
+          autoAlpha: 0,
+          duration: 0.5,
+          ease: 'power2.out',
+        });
+      });
+
+      // Chapter h2 titles — clip-path style reveal
+      const chapterTitles = Array.from(
+        document.querySelectorAll('section[id^="ch"] h2')
+      );
+      chapterTitles.forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+          y: 32,
+          autoAlpha: 0,
+          duration: 0.85,
+          ease: 'power3.out',
+        });
+      });
+
+      // Chapter italic quotes (the subtitle under h2)
+      const chapterQuotes = Array.from(
+        document.querySelectorAll('section[id^="ch"] > span')
+      );
+      chapterQuotes.forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 90%' },
+          y: 14,
+          autoAlpha: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+        });
+      });
+
+      // Lesson/callout boxes
+      const lessonBoxes = Array.from(
+        document.querySelectorAll('.border-l-\\[3px\\]')
+      );
+      lessonBoxes.forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+          x: -18,
+          autoAlpha: 0,
+          duration: 0.65,
+          ease: 'power2.out',
+        });
+      });
+
+      // Yellow stat grids and callout blocks
+      const statBlocks = Array.from(
+        document.querySelectorAll('.bg-yellow, .border.border-white\\/10.bg-\\[\\#0d0d0d\\]')
+      );
+      statBlocks.forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+          y: 20,
+          autoAlpha: 0,
+          duration: 0.7,
+          ease: 'power2.out',
+        });
+      });
+
+      // Dedication section text
+      const dedicationParas = Array.from(
+        document.querySelectorAll('.markdown-body p')
+      );
+      dedicationParas.slice(0, 20).forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: 'top 92%' },
+          y: 12,
+          autoAlpha: 0,
+          duration: 0.55,
+          ease: 'power2.out',
+        });
+      });
+
+      // Chapter atmosphere: fade in each chapter's mood glow on scroll enter
+      Object.keys(CHAPTER_MOODS).forEach((id) => {
+        ScrollTrigger.create({
+          trigger: `#${id}`,
+          start: 'top 65%',
+          end: 'bottom 35%',
+          onEnter:     () => gsap.to(`.chapter-atm-${id}`, { opacity: 1, duration: 0.9, ease: 'power2.out' }),
+          onLeave:     () => gsap.to(`.chapter-atm-${id}`, { opacity: 0, duration: 0.7 }),
+          onEnterBack: () => gsap.to(`.chapter-atm-${id}`, { opacity: 1, duration: 0.9, ease: 'power2.out' }),
+          onLeaveBack: () => gsap.to(`.chapter-atm-${id}`, { opacity: 0, duration: 0.7 }),
+        });
+      });
+
+      // Chapter watermark parallax — moves slower than scroll for depth
+      const watermarks = Array.from(document.querySelectorAll('.chapter-watermark'));
+      watermarks.forEach((el) => {
+        gsap.to(el, {
+          yPercent: -28,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: el.closest('section'),
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true,
+          },
+        });
+      });
+
+      ScrollTrigger.refresh();
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+    };
+  }, [isAccessGranted]);
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -531,48 +588,17 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
           >
-            <motion.div 
-              className="fixed top-0 left-0 z-[100] h-1 bg-gold" 
-              style={{ width: `${scrollProgress}%` }}
+            {/* GSAP-scrubbed progress bar */}
+            <div
+              ref={progressBarRef}
+              className="fixed top-0 left-0 z-[100] h-[2px] w-full bg-gradient-to-r from-gold/70 via-gold to-yellow/80 origin-left"
+              style={{ transform: 'scaleX(0)' }}
             />
 
       <div className="mx-auto max-w-[820px] bg-black">
-        
-        {/* Cover Section */}
-        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] px-6 pt-10 pb-20 text-center md:px-16">
-          <div className="absolute top-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
-          <div className="absolute bottom-0 right-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex flex-col items-center"
-          >
-            <div className="mb-12 font-mono text-[9px] tracking-[5px] uppercase text-gold/40">
-              Quantum Hospitality Solutions
-            </div>
-            
-            <div className="mb-12 opacity-70">
-              <Key className="h-8 w-8 text-gold" />
-            </div>
-            
-            <h1 className="font-serif leading-none">
-              <span className="mb-2 block text-sm italic tracking-[2px] text-gold md:text-xl">Somehow</span>
-              <span className="block font-black text-4xl md:text-[44px] leading-tight md:leading-[49px] tracking-normal">I&nbsp;&nbsp;MANAGED</span>
-            </h1>
-            
-            <div className="my-10 h-[1px] w-8 bg-gold opacity-60" />
-            
-            <div className="font-serif text-lg tracking-wider text-white/55 md:text-xl">
-              Alejandro Soria
-            </div>
-          </motion.div>
-          
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] tracking-[4px] uppercase text-white/10">
-            Hospitality Edition &nbsp;·&nbsp; First Print
-          </div>
-        </section>
+
+        {/* Cover Section — GSAP animated */}
+        <CoverSection />
 
         {/* Dedication Section */}
         <section className="flex flex-col items-center justify-center border-b border-white/10 px-6 py-16 text-center md:px-20 md:py-20">
@@ -637,7 +663,11 @@ export default function App() {
         </section>
 
         {/* Chapter 00 */}
-        <section id="ch0" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch0" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch0 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(201, 120, 40, 0.28) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>00</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">00 · Foreword</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -652,18 +682,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">The Houseman Who Fell in Love</h2>
+          <ChapterTitle text="The Houseman Who Fell in Love" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "I showed up thinking I was going to work in an office. I was. It just needed to be cleaned first."
           </span>
           
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch0']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch0'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch0'}
             explanation={explanations['ch0']}
             hasError={errorIds['ch0']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch0')?.prompt || '', 'ch0')}
+            chapterId="ch0"
+            chapterQuote="I showed up thinking I was going to work in an office. I was. It just needed to be cleaned first."
           />
 
           <div className="markdown-body">
@@ -708,7 +740,11 @@ export default function App() {
         </section>
 
         {/* Chapter 01 */}
-        <section id="ch1" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch1" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch1 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(40, 130, 210, 0.22) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>01</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">01 · Day Zero</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -723,18 +759,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Opening a Hotel From Scratch</h2>
+          <ChapterTitle text="Opening a Hotel From Scratch" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "You will never feel ready. Open anyway. The hotel will finish building itself around you."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch1']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch1'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch1'}
             explanation={explanations['ch1']}
             hasError={errorIds['ch1']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch1')?.prompt || '', 'ch1')}
+            chapterId="ch1"
+            chapterQuote="You will never feel ready. Open anyway. The hotel will finish building itself around you."
           />
           
           <div className="markdown-body">
@@ -786,7 +824,11 @@ export default function App() {
         </section>
 
         {/* Chapter 02 */}
-        <section id="ch2" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch2" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch2 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(180, 30, 30, 0.28) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>02</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">02 · The Turnaround</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -801,18 +843,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Walking Into a Broken Property</h2>
+          <ChapterTitle text="Walking Into a Broken Property" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Don't fix what you see first. Understand what broke it."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch2']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch2'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch2'}
             explanation={explanations['ch2']}
             hasError={errorIds['ch2']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch2')?.prompt || '', 'ch2')}
+            chapterId="ch2"
+            chapterQuote="Don't fix what you see first. Understand what broke it."
           />
           
           <div className="markdown-body">
@@ -860,7 +904,11 @@ export default function App() {
         </section>
 
         {/* Chapter 03 */}
-        <section id="ch3" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch3" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch3 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(100, 40, 180, 0.22) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>03</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">03 · The Money People</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -875,18 +923,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Managing Ownership & Investors</h2>
+          <ChapterTitle text="Managing Ownership & Investors" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "They own the building. You run the building. These are not the same job."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch3']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch3'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch3'}
             explanation={explanations['ch3']}
             hasError={errorIds['ch3']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch3')?.prompt || '', 'ch3')}
+            chapterId="ch3"
+            chapterQuote="They own the building. You run the building. These are not the same job."
           />
           
           <div className="markdown-body">
@@ -955,7 +1005,11 @@ export default function App() {
         </section>
 
         {/* Chapter 04 */}
-        <section id="ch4" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch4" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch4 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(40, 150, 80, 0.20) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>04</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">04 · People First</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -970,18 +1024,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Your Team Is Everything</h2>
+          <ChapterTitle text="Your Team Is Everything" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Real culture is not a ping-pong table or a pizza party. It's what happens when you aren't in the room."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch4']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch4'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch4'}
             explanation={explanations['ch4']}
             hasError={errorIds['ch4']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch4')?.prompt || '', 'ch4')}
+            chapterId="ch4"
+            chapterQuote="Real culture is not a ping-pong table or a pizza party. It's what happens when you aren't in the room."
           />
           
           <div className="markdown-body">
@@ -1032,7 +1088,11 @@ export default function App() {
         </section>
 
         {/* Chapter 05 */}
-        <section id="ch5" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch5" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch5 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(220, 90, 20, 0.28) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>05</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">05 · F&B Strategy</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1047,18 +1107,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">F&B Is Not an Amenity</h2>
+          <ChapterTitle text="F&B Is Not an Amenity" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Stop treating your restaurant like a loss leader. It's a profit center that happens to serve food."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch5']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch5'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch5'}
             explanation={explanations['ch5']}
             hasError={errorIds['ch5']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch5')?.prompt || '', 'ch5')}
+            chapterId="ch5"
+            chapterQuote="Stop treating your restaurant like a loss leader. It's a profit center that happens to serve food."
           />
           
           <div className="markdown-body">
@@ -1099,7 +1161,11 @@ export default function App() {
         </section>
 
         {/* Chapter 06 */}
-        <section id="ch6" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch6" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch6 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(20, 100, 220, 0.22) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>06</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">06 · Modernization</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1114,18 +1180,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">The Last Industry to Modernize</h2>
+          <ChapterTitle text="The Last Industry to Modernize" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Technology is not your enemy. It's your leverage. Use it to be more human, not less."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch6']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch6'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch6'}
             explanation={explanations['ch6']}
             hasError={errorIds['ch6']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch6')?.prompt || '', 'ch6')}
+            chapterId="ch6"
+            chapterQuote="Technology is not your enemy. It's your leverage. Use it to be more human, not less."
           />
           
           <div className="markdown-body">
@@ -1166,7 +1234,11 @@ export default function App() {
         </section>
 
         {/* Chapter 07 */}
-        <section id="ch7" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch7" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch7 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(60, 80, 120, 0.35) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>07</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">07 · Resilience</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1181,18 +1253,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">Running on Empty</h2>
+          <ChapterTitle text="Running on Empty" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "Burnout is not a badge of honor. It's a failure of sustainability."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch7']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch7'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch7'}
             explanation={explanations['ch7']}
             hasError={errorIds['ch7']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch7')?.prompt || '', 'ch7')}
+            chapterId="ch7"
+            chapterQuote="Burnout is not a badge of honor. It's a failure of sustainability."
           />
           
           <div className="markdown-body">
@@ -1236,7 +1310,11 @@ export default function App() {
         </section>
 
         {/* Chapter 08 */}
-        <section id="ch8" className="border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+        <section id="ch8" className="relative overflow-hidden border-b border-white/10 px-6 py-8 md:px-20 md:py-12">
+          {/* Chapter atmosphere glow */}
+          <div className="chapter-atm-ch8 pointer-events-none absolute inset-0 opacity-0" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(201, 168, 76, 0.25) 0%, transparent 65%)' }} />
+          {/* Chapter watermark */}
+          <span aria-hidden="true" className="chapter-watermark pointer-events-none absolute right-0 -top-4 select-none font-serif font-black text-white/[0.025] leading-none" style={{ fontSize: 'clamp(160px, 25vw, 260px)' }}>08</span>
           <div className="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-center md:justify-between">
             <span className="font-mono text-[9px] tracking-[4px] uppercase text-gold md:text-[10px] md:tracking-[5px]">08 · Closing Notes</span>
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1251,18 +1329,20 @@ export default function App() {
             </div>
           </div>
 
-          <h2 className="mb-4 font-serif text-3xl font-black tracking-tight md:text-6xl">What I Know Now</h2>
+          <ChapterTitle text="What I Know Now" />
           <span className="mb-8 block border-b border-gold pb-6 font-serif text-base italic leading-relaxed text-white/45 md:mb-12 md:pb-9 md:text-lg">
             "You are not just managing a building. You are managing a legacy. Make it one worth leaving."
           </span>
 
-          <LivingPortrait 
+          <CinematicPortrait
             src={chapterImages['ch8']?.imageUrl}
-            alt="Visualizing the story" 
-            isGenerating={generatingImageId === 'ch8'} 
+            alt="Visualizing the story"
+            isGenerating={generatingImageId === 'ch8'}
             explanation={explanations['ch8']}
             hasError={errorIds['ch8']}
             onRetry={() => generateChapterImage(CHAPTERS.find(c => c.id === 'ch8')?.prompt || '', 'ch8')}
+            chapterId="ch8"
+            chapterQuote="You are not just managing a building. You are managing a legacy. Make it one worth leaving."
           />
           
           <div className="markdown-body">
