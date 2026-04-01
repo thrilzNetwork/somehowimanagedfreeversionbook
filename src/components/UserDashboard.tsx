@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, 
   Calendar, 
-  Zap, 
+  Users, 
   TrendingUp, 
   Briefcase, 
   FileText, 
@@ -146,7 +146,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
         <div className="flex items-center justify-between border-b border-white/5 p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gold/10 text-gold">
-              <Zap className="h-5 w-5" />
+              <Users className="h-5 w-5" />
             </div>
             <div>
               <h2 className="font-serif text-xl font-bold text-white">Quantum Community</h2>
