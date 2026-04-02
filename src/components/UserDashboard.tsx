@@ -157,6 +157,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {profile?.role === 'admin' && (
+              <button 
+                onClick={() => {
+                  onClose();
+                  window.location.hash = '#/admin';
+                  window.location.reload();
+                }}
+                className="rounded-full p-2 text-gold hover:bg-gold/10 transition-colors"
+                title="Admin Dashboard"
+              >
+                <ShieldCheck className="h-5 w-5" />
+              </button>
+            )}
             <button 
               onClick={() => signOut(auth)}
               className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
