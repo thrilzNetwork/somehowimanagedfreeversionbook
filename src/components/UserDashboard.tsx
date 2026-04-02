@@ -27,9 +27,9 @@ import {
   LogOut,
   Zap
 } from 'lucide-react';
+import { generateDeterministicMindmap } from '../services/mindmapService';
 import { auth, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
-import { generateCareerMindmap } from '../services/aiService';
 
 interface UserDashboardProps {
   onClose: () => void;
@@ -98,7 +98,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     setIsGeneratingMindmap(true);
     try {
       const bookInfo = bookItems.map(b => `${b.title}: ${b.body}`).join('\n');
-      const result = await generateCareerMindmap(careerText, bookInfo);
+      const result = generateDeterministicMindmap(careerText, bookInfo);
       setMindmap(result);
       await updateCareerMindmap(user.uid, result);
     } catch (err) {
