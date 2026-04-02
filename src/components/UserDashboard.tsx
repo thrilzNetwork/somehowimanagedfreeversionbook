@@ -28,7 +28,7 @@ import {
   Zap
 } from 'lucide-react';
 import { auth, syncUser, getUserProfile, getCommunityContent, requestConsultation, updateCareerProfile, updateCareerMindmap } from '../firebase';
-import { onAuthStateChanged, User as FirebaseUser, signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, signOut, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
 import { generateCareerMindmap } from '../services/aiService';
 
 interface UserDashboardProps {
@@ -36,6 +36,7 @@ interface UserDashboardProps {
 }
 
 export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
+  const [isSignIn, setIsSignIn] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [content, setContent] = useState<any[]>([]);
@@ -177,9 +178,9 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
             <div className="mb-6 h-20 w-20 rounded-full bg-gold/5 flex items-center justify-center text-gold">
               <ShieldCheck className="h-10 w-10" />
             </div>
-            <h3 className="mb-2 text-2xl font-bold text-white font-serif">Exclusive Access</h3>
+            <h3 className="mb-2 text-2xl font-bold text-white font-serif">{isSignIn ? 'Welcome Back' : 'Exclusive Access'}</h3>
             <p className="mb-8 max-w-sm text-sm text-white/40">
-              Join the Quantum Closed Community to access share prices, exclusive drops, and hire opportunities.
+              {isSignIn ? 'Sign in to access your account.' : 'Join the Quantum Closed Community to access share prices, exclusive drops, and hire opportunities.'}
             </p>
             <form 
               onSubmit={async (e) => {
@@ -188,25 +189,29 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                 const name = formData.get('name') as string;
                 const email = formData.get('email') as string;
                 const password = formData.get('password') as string;
-                if (name && email && password) {
-                  try {
+                try {
+                  if (isSignIn) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                  } else {
+                    if (!name) throw new Error('Name is required');
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     await updateProfile(userCredential.user, { displayName: name });
-                    // No reload needed, onAuthStateChanged will handle the state update
-                  } catch (err: any) {
-                    console.error('Sign up error:', err);
-                    alert(err.message || 'Sign up failed. Please try again.');
                   }
+                } catch (err: any) {
+                  console.error('Auth error:', err);
+                  alert(err.message || 'Authentication failed. Please try again.');
                 }
               }}
               className="w-full max-w-xs space-y-4"
             >
-              <input 
-                name="name" 
-                placeholder="Full Name" 
-                required 
-                className="w-full rounded-lg bg-white/5 p-3 text-sm text-white border border-white/10 focus:border-gold outline-none"
-              />
+              {!isSignIn && (
+                <input 
+                  name="name" 
+                  placeholder="Full Name" 
+                  required 
+                  className="w-full rounded-lg bg-white/5 p-3 text-sm text-white border border-white/10 focus:border-gold outline-none"
+                />
+              )}
               <input 
                 name="email" 
                 type="email" 
@@ -226,7 +231,14 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold px-8 py-4 text-sm font-bold text-black transition-all hover:bg-yellow"
               >
                 <LogIn className="h-4 w-4" />
-                Sign Up
+                {isSignIn ? 'Sign In' : 'Sign Up'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSignIn(!isSignIn)}
+                className="text-xs text-white/40 hover:text-gold transition-all"
+              >
+                {isSignIn ? 'Need an account? Sign Up' : 'Already have an account? Sign In'}
               </button>
             </form>
           </div>
