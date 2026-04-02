@@ -269,6 +269,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, generat
                     <h3 className="font-serif text-2xl font-bold text-white">Email Entries</h3>
                     <div className="flex items-center gap-4">
                       <button 
+                        onClick={fetchAllData}
+                        className="text-[10px] font-bold uppercase tracking-[1px] text-gold hover:underline"
+                      >
+                        Test Connection
+                      </button>
+                      <button 
                         onClick={async () => {
                           for (const chapter of chapters) {
                             await generateChapterImage(chapter.prompt, chapter.id);
