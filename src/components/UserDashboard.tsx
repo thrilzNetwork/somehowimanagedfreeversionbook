@@ -96,7 +96,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ onClose }) => {
     if (!user || !careerText.trim()) return;
     setIsGeneratingMindmap(true);
     try {
-      const result = await generateCareerMindmap(careerText);
+      const bookInfo = bookItems.map(b => `${b.title}: ${b.body}`).join('\n');
+      const result = await generateCareerMindmap(careerText, bookInfo);
       setMindmap(result);
       await updateCareerMindmap(user.uid, result);
     } catch (err) {
